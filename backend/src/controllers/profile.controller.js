@@ -1,5 +1,5 @@
 import httpStatus from "http-status";
-import { StudentProfile } from "../models/studentprofile.model";
+import { StudentProfile } from "../models/studentprofile.model.js";
 
 const createProfile=async(req,res)=>{
     try{
@@ -54,4 +54,4 @@ const updateProfile=async(req,res)=>{
     }
 }
 
-export { CreateProfile, GetProfile, UpdateProfile }
+export { createProfile, getProfile, updateProfile }
