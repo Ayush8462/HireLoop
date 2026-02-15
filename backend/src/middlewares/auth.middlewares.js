@@ -1,10 +1,11 @@
 import jwt from "jsonwebtoken";
+import httpStatus from "http-status";
 
 const verifyToken = (req, res, next) => {
   const token = req.header("Authorization");
 
   if(!token){
-    return res.status(401).json({message: "Access denied"});
+    return res.status(httpStatus.UNAUTHORIZED).json({message: "Access denied"});
   }
 
   try {
@@ -12,7 +13,7 @@ const verifyToken = (req, res, next) => {
     req.user = decode;
     next();
   } catch (err) {
-    res.status(400).json({msg: "Invalid token"})
+    res.status(httpStatus.OK).json({msg: "Invalid token"})
   }
 }
 
