@@ -1,7 +1,7 @@
 import httpStatus from "http-status";
 import { StudentProfile } from "../models/studentprofile.model";
 
-const CreateProfile=async(req,res)=>{
+const createProfile=async(req,res)=>{
     try{
         const existing=await StudentProfile.findOne({userId:req.user.id});
         if(existing){
@@ -25,7 +25,7 @@ const CreateProfile=async(req,res)=>{
   }
 }
 
-const GetProfile=async(req,res)=>{
+const getProfile=async(req,res)=>{
     try{
         const profile=await StudentProfile.findOne({userId:req.user.id}).populate("userId","name email role")
         if(!profile){
@@ -37,7 +37,7 @@ const GetProfile=async(req,res)=>{
     }
 }
 
-const UpdateProfile=async(req,res)=>{
+const updateProfile=async(req,res)=>{
     try{
         const updated=await StudentProfile.findOneAndUpdate(
             {userId:req.user.id},
