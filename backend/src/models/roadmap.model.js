@@ -21,4 +21,6 @@ const roadmapSchema = new Schema({
   preparationTimeline: String
 }, { timestamps: true });
 
-export default Roadmap = mongoose.model("Roadmap", roadmapSchema);
+const Roadmap = mongoose.model("Roadmap", roadmapSchema);
+
+export default Roadmap;
