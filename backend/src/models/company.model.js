@@ -1,0 +1,28 @@
+import mongoose, { Schema } from "mongoose";
+
+const companySchema = new Schema({
+  name: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true
+  },
+
+  roles: [String],
+
+  avgPackage: {
+    type: Number,
+    default: 0
+  },
+
+  difficultyLevel: {
+    type: String,
+    enum: ["easy", "medium", "hard"],
+    default: "medium"
+  }
+}, {timestamps: true});
+
+const Company = mongoose.model("Company", companySchema);
+
+export default Company;

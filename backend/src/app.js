@@ -3,7 +3,9 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
+
 import resumeRotes from "./routes/resume.routes.js"
+import companyRoutes from "./routes/company.routes.js";
 
 const app = express();
 const allowedOrigins = process.env.CORS_ORIGINS
@@ -24,7 +26,8 @@ app.use(cors({
 
 app.use("/api/v1/auth", authRoutes)
 app.use("/api/v1/profile", profileRoutes)
-app.use("/api/v1/resume",resumeRotes)
+app.use("/api/v1/resume", resumeRotes)
+app.use("/api/v1/company", companyRoutes)
 
 app.get('/', (req, res) => {
   res.send('Hello World!')

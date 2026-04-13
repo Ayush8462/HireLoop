@@ -25,6 +25,7 @@
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^5.4.624",
     "socket.io": "^4.8.3",
-    "streamifier": "^0.1.1"
+    "streamifier": "^0.1.1",
+    "redis": "^5.11.0"
   }
 }

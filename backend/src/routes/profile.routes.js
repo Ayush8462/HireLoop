@@ -6,6 +6,6 @@ const router = Router();
 
 router.post("/create", verifyToken, createProfile);
 router.get("/me", verifyToken, getProfile);
-router.put("update", verifyToken, updateProfile);
+router.put("/update", verifyToken, updateProfile);
 
 export default router;
