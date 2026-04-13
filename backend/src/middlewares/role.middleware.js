@@ -9,5 +9,4 @@ const rolestatus = (...roles)=>{
   };
 };
 
-
-export default rolestatus ;
+export default rolestatus;

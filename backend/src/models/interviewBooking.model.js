@@ -22,7 +22,7 @@ const interviewBookingSchema = new Schema({
         default: "scheduled"
     },
     feedback: {
-         technicalRating: { type: Number, min: 1, max: 5, default: null },
+        technicalRating: { type: Number, min: 1, max: 5, default: null },
         communicationRating: { type: Number, min: 1, max: 5, default: null },
         problemSolvingRating: { type: Number, min: 1, max: 5, default: null },
         strengths: { type: String, default: "" },
@@ -30,4 +30,4 @@ const interviewBookingSchema = new Schema({
     }
 }, { timestamps: true });
 
-export const InterviewBooking = mongoose.model("InterviewBooking",interviewBookingSchema)
+export const InterviewBooking = mongoose.model("InterviewBooking", interviewBookingSchema)

@@ -22,6 +22,6 @@ const interviewSlotSchema = new Schema({
         type: Boolean,
         default: false
     }
-}, { timestamps: true});
+}, { timestamps: true });
 
-export const InterviewSlot = mongoose.model("InterviewSlot",interviewSlotSchema);
+export const InterviewSlot = mongoose.model("InterviewSlot", interviewSlotSchema);

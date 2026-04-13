@@ -1,7 +1,7 @@
 import express from "express";
 import authMiddleware from "../middlewares/auth.middlewares.js";
 import upload from "../middlewares/upload.middleware.js";
-import  uploadResume  from "../controllers/resume.controller.js";
+import uploadResume from "../controllers/resume.controller.js";
 
 const router = express.Router();
 
