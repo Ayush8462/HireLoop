@@ -2,7 +2,10 @@ import jwt from "jsonwebtoken";
 import httpStatus from "http-status";
 
 const verifyToken = (req, res, next) => {
-  const token = req.header("Authorization");
+  const authHeader = req.header("Authorization");
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : authHeader;
 
   if(!token){
     return res.status(httpStatus.UNAUTHORIZED).json({message: "Access denied"});
@@ -13,7 +16,7 @@ const verifyToken = (req, res, next) => {
     req.user = decode;
     next();
   } catch (err) {
-    res.status(httpStatus.OK).json({msg: "Invalid token"})
+    return res.status(httpStatus.UNAUTHORIZED).json({message: "Invalid token"});
   }
 }
 

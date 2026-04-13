@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Company from "../models/company.model.js";
 import Roadmap from "../models/roadmap.model.js";
-import redisClient from "../config/redis.js";
+import redisClient from "../config/redis.client.js";
 
 const createCompany = async (req, res) => {
   const { name, roles, avgPackage, difficultyLevel } = req.body;

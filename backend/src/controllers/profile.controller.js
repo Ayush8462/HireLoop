@@ -1,5 +1,5 @@
 import httpStatus from "http-status";
-import { StudentProfile } from "../models/studentprofile.model.js";
+import { StudentProfile } from "../models/StudentProfile.model.js";
 
 const createProfile = async (req,res) => {
     try{
