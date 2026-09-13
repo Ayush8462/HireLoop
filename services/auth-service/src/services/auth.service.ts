@@ -32,6 +32,7 @@ export class AuthService {
       passwordHash,
       firstName: input.firstName,
       lastName: input.lastName,
+      role: input.role,
     });
 
     return {

@@ -66,6 +66,7 @@ const userSchema = new Schema<UserDocument>(
         "admin",
       ],
       default: "user",
+      required: true,
     },
 
     status: {

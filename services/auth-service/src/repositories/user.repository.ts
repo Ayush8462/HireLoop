@@ -1,5 +1,6 @@
 import {
   UserModel,
+  UserRole
 } from "../models/user.model.js";
 
 export class UserRepository {
@@ -23,6 +24,7 @@ export class UserRepository {
     passwordHash: string;
     firstName: string;
     lastName: string;
+    role: UserRole;
   }) {
     return UserModel.create(data);
   }

@@ -26,6 +26,9 @@ export const registerSchema = z.object({
       .trim()
       .min(1)
       .max(50),
+    role: z
+      .enum(["user", "senior"])
+      .default("user"),
 })
 
 
