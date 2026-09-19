@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Types } from "mongoose";
 import type { QueryFilter } from "mongoose";
 import { Company, CompanyDocument, ICompany } from "../models/company.model.js";
@@ -20,12 +21,28 @@ export class CompanyRepository {
 
   async findBySlug(slug: string): Promise<CompanyDocument | null> {
     return Company.findOne({ slug });
+=======
+import { Company, CompanyDocument, ICompany } from "../models/company.model.js";
+
+export class CompanyRepository {
+  async create(data: Omit<ICompany, "createdAt" | "updatedAt">): Promise<CompanyDocument> {
+    return Company.create(data);
+  }
+
+  async findAll(): Promise<CompanyDocument[]> {
+    return Company.find().sort({ name: 1 });
+  }
+
+  async findById(id: string): Promise<CompanyDocument | null> {
+    return Company.findById(id);
+>>>>>>> 55f20c7ca04c3b0ac5e7d8c00ec73b2c22d8f990
   }
 
   async findByName(name: string): Promise<CompanyDocument | null> {
     return Company.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") } });
   }
 
+<<<<<<< HEAD
   async findSlugExists(slug: string): Promise<boolean> {
     const count = await Company.countDocuments({ slug });
     return count > 0;
@@ -61,6 +78,10 @@ export class CompanyRepository {
       query.isVerified = filter.isVerified;
     }
     return query;
+=======
+  async findBySlug(slug: string): Promise<CompanyDocument | null> {
+    return Company.findOne({ slug });
+>>>>>>> 55f20c7ca04c3b0ac5e7d8c00ec73b2c22d8f990
   }
 }
 

@@ -26,26 +26,38 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Button clicked");
 
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match");
       return;
     }
 
-    // Call your backend API here
-  
-    try{
-      const {data} = await signup(formData);
+    const nameParts = formData.name.trim().split(/\s+/);
+    const firstName = nameParts[0] || "User";
+    const lastName = nameParts.slice(1).join(" ") || firstName;
 
+    const payload = {
+      email: formData.email,
+      password: formData.password,
+      firstName,
+      lastName,
+      name: formData.name,
+      role: formData.role === "alumni" ? "senior" : "user",
+    };
+
+    try {
+      await signup(payload);
       alert("Account created successfully!");
       navigate("/login");
-    }catch(err){
-      console.log(err);
-      alert(err.response?.data?.message || err.message|| "An error occurred during signup.");
+    } catch (err) {
+      console.error(err);
+      alert(
+        err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        err.message ||
+        "An error occurred during signup."
+      );
     }
-
-    
   };
 
   return (

@@ -1,10 +1,19 @@
+<<<<<<< HEAD
 import { z } from 'zod';
 import { objectIdSchema } from './profile.validator.js';
+=======
+import { z } from "zod";
+
+const objectIdSchema = z
+  .string()
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+>>>>>>> 55f20c7ca04c3b0ac5e7d8c00ec73b2c22d8f990
 
 export const createSlotSchema = z.object({
   body: z.object({
     startTime: z.string().datetime(),
     endTime: z.string().datetime(),
+<<<<<<< HEAD
     meetingUrl: z.string().url().optional()
   }).refine((data) => new Date(data.startTime) < new Date(data.endTime), {
     message: 'endTime must be after startTime',
@@ -76,4 +85,18 @@ export const getBookingsSchema = z.object({
     page: z.string().regex(/^\d+$/).optional(),
     limit: z.string().regex(/^\d+$/).optional()
   })
+=======
+  }),
+  params: z.object({}),
+  query: z.object({}),
+});
+
+export const bookInterviewSchema = z.object({
+  body: z.object({
+    slotId: objectIdSchema,
+    notes: z.string().trim().max(2000).optional(),
+  }),
+  params: z.object({}),
+  query: z.object({}),
+>>>>>>> 55f20c7ca04c3b0ac5e7d8c00ec73b2c22d8f990
 });

@@ -1,0 +1,62 @@
+services:
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: hireloop-gateway
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - CLIENT_URL=http://localhost:5173
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - CORE_SERVICE_URL=http://core-service:5002
+      - ATS_SERVICE_URL=http://ats-service:5003
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5004
+    depends_on:
+      - auth-service
+      - core-service
+      - ats-service
+    networks:
+      - hireloop-network
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: hireloop-auth-service
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./services/auth-service/.env
+    networks:
+      - hireloop-network
+
+  core-service:
+    build:
+      context: ./services/core-service
+      dockerfile: Dockerfile
+    container_name: hireloop-core-service
+    ports:
+      - "5002:5002"
+    env_file:
+      - ./services/core-service/.env
+    networks:
+      - hireloop-network
+
+  ats-service:
+    build:
+      context: ./services/ats-service
+      dockerfile: Dockerfile
+    container_name: hireloop-ats-service
+    ports:
+      - "5003:5003"
+    environment:
+      - PORT=5003
+      - NODE_ENV=production
+    networks:
+      - hireloop-network
+
+networks:
+  hireloop-network:
+    driver: bridge

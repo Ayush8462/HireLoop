@@ -13,9 +13,9 @@ export default function LandingPage() {
           {/* LOGO SECTION */}
           <a href="/" className="flex items-center gap-2">
             <img 
-              src="./ca-removebg-preview.png" 
+              src="./logo.png" 
               alt="Company Logo" 
-              className="h-12 w-auto object-contain" 
+              className="h-14 w-auto object-contain" 
             />
           </a>
 

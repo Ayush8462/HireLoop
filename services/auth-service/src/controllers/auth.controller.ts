@@ -3,8 +3,6 @@ import { env } from "../config/env.js";
 import { registerSchema, loginSchema } from "../validators/auth.validator.js";
 
 import { AuthService } from "../services/auth.service.js";
-import { success } from "zod";
-import { access } from "fs";
 
 const authService = new AuthService();
 
