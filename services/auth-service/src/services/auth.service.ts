@@ -93,12 +93,12 @@ export class AuthService {
       accessToken,
       refreshToken,
       user: {
-        id: user.isDirectModified,
+        id: user.id || user._id.toString(),
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        emailVerfied: user.emailVerified,
+        emailVerified: user.emailVerified,
       },
     };
   }
@@ -121,9 +121,9 @@ export class AuthService {
       throw new Error("Session expired");
     }
 
-    const receivedTokendHash = hashToken(refreshToken);
+    const receivedTokenHash = hashToken(refreshToken);
 
-    if (receivedTokendHash !== session.refreshTokenHash) {
+    if (receivedTokenHash !== session.refreshTokenHash) {
       await this.sessionRepository.deleteById(session.id);
 
       throw new Error("Invalid refresh token");

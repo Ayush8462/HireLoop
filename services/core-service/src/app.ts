@@ -1,12 +1,16 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import {pinoHttp} from "pino-http";
-import testRoutes from "./routes/test.routes.js";
+import { pinoHttp } from "pino-http";
 
+import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import healthRoutes from "./routes/health.routes.js";
-import profileRoutes from "./routes/profile.routes.js"
+import testRoutes from "./routes/test.routes.js";
+import profileRoutes from "./routes/profile.routes.js";
+import companyRoutes from "./routes/company.routes.js";
+import referralRoutes from "./routes/referral.routes.js";
+import interviewRoutes from "./routes/interview.routes.js";
 import { notFoundMiddleware } from "./middlewares/not-found.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
@@ -22,7 +26,7 @@ app.use(helmet());
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: true,
     credentials: true,
   }),
 );
@@ -39,6 +43,9 @@ app.get("/", (_req, res) => {
 app.use("/health", healthRoutes);
 app.use("/test", testRoutes);
 app.use("/profiles", profileRoutes);
+app.use("/companies", companyRoutes);
+app.use("/referrals", referralRoutes);
+app.use("/interviews", interviewRoutes);
 
 app.use(notFoundMiddleware);
 

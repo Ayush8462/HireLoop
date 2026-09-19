@@ -1,10 +1,24 @@
 import axios from "axios";
 
 const API = axios.create({
-    baseURL: "http://localhost:8000",
-    withCredentials: true,
-})
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+  withCredentials: true,
+});
 
-export const signup = (data) => API.post("/api/v1/auth/register", data);
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-export const login = (data) => API.post("/api/v1/auth/login", data);
+export const signup = (data) => API.post("/api/auth/register", data);
+
+export const login = (data) => API.post("/api/auth/login", data);
+
+export const refresh = () => API.post("/api/auth/refresh");
+
+export const logout = () => API.post("/api/auth/logout");
+
+export default API;

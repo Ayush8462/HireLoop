@@ -26,27 +26,31 @@ export default function Login() {
 
     // Call Login API here
 
-     try {
-    const { data } = await login(formData);
+    try {
+      const { data } = await login(formData);
 
-    alert("Login successful!");
+      const token = data?.data?.accessToken || data?.token;
+      const user = data?.data?.user || data?.user;
 
-    // Example: store JWT token if returned by your backend
-    if (data.token) {
-      localStorage.setItem("token", data.token);
+      if (token) {
+        localStorage.setItem("token", token);
+      }
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
+      alert("Login successful!");
+      navigate("/dashboard");
+    } catch (err) {
+      console.error(err);
+
+      alert(
+        err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        err.message ||
+        "Login failed"
+      );
     }
-
-    // Navigate after successful login
-    navigate("/dashboard");
-  } catch (err) {
-    console.error(err);
-
-    alert(
-      err.response?.data?.message ||
-      err.message ||
-      "Login failed"
-    );
-  }
   };
 
   return (
