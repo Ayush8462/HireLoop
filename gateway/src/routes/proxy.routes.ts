@@ -6,16 +6,12 @@ import { atsProxy } from "../proxy/ats.proxy.js";
 const router = Router();
 
 // Auth Service
-router.use("/api/auth", authProxy);
-router.use("/api/v1/auth", authProxy);
-
-// Core Service (Profiles, Companies, Roadmaps, Referrals, Interviews)
-router.use("/api/profiles", coreProxy);
-router.use("/api/companies", coreProxy);
-router.use("/api/referrals", coreProxy);
-router.use("/api/interviews", coreProxy);
+router.use(authProxy);
 
 // ATS Service
-router.use("/api/ats", atsProxy);
+router.use(atsProxy);
+
+// Core Service (Profiles, Companies, Roadmaps, Referrals, Interviews)
+router.use(coreProxy);
 
 export default router;
