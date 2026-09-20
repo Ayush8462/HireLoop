@@ -42,10 +42,10 @@ app.get("/", (_req, res) => {
 
 app.use("/health", healthRoutes);
 app.use("/test", testRoutes);
-app.use("/profiles", profileRoutes);
-app.use("/companies", companyRoutes);
-app.use("/referrals", referralRoutes);
-app.use("/interviews", interviewRoutes);
+app.use(["/profiles", "/api/profiles"], profileRoutes);
+app.use(["/companies", "/api/companies"], companyRoutes);
+app.use(["/referrals", "/api/referrals"], referralRoutes);
+app.use(["/interviews", "/api/interviews"], interviewRoutes);
 
 app.use(notFoundMiddleware);
 

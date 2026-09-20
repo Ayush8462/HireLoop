@@ -4,6 +4,12 @@ import { env } from "../config/env.js";
 export const coreProxy = createProxyMiddleware({
   target: env.services.core,
   changeOrigin: true,
+  pathFilter: [
+    "/api/profiles",
+    "/api/companies",
+    "/api/referrals",
+    "/api/interviews",
+  ],
   pathRewrite: {
     "^/api": "",
   },
