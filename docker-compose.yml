@@ -4,6 +4,7 @@ services:
       context: ./gateway
       dockerfile: Dockerfile
     container_name: hireloop-gateway
+    restart: unless-stopped
     ports:
       - "5000:5000"
     environment:
@@ -25,6 +26,7 @@ services:
       context: ./services/auth-service
       dockerfile: Dockerfile
     container_name: hireloop-auth-service
+    restart: unless-stopped
     ports:
       - "5001:5001"
     env_file:
@@ -37,6 +39,7 @@ services:
       context: ./services/core-service
       dockerfile: Dockerfile
     container_name: hireloop-core-service
+    restart: unless-stopped
     ports:
       - "5002:5002"
     env_file:
@@ -49,11 +52,27 @@ services:
       context: ./services/ats-service
       dockerfile: Dockerfile
     container_name: hireloop-ats-service
+    restart: unless-stopped
     ports:
       - "5003:5003"
+    env_file:
+      - ./services/ats-service/.env
     environment:
       - PORT=5003
       - NODE_ENV=production
+    networks:
+      - hireloop-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hireloop-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - gateway
     networks:
       - hireloop-network
 
