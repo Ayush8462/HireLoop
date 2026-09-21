@@ -8,9 +8,12 @@ import { useAuth } from "../context/AuthContext";
  * If user is authenticated, redirect to /dashboard.
  */
 export default function PublicRoute({ children }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   if (isAuthenticated) {
+    if (user?.role === "senior" || user?.role === "alumni") {
+      return <Navigate to="/senior-dashboard" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -64,7 +64,11 @@ export default function Login() {
       }
 
       alert("Login successful!");
-      navigate("/dashboard", { replace: true });
+      if (user?.role === "senior" || user?.role === "alumni") {
+        navigate("/senior-dashboard", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
     } catch (err) {
       console.error(err);
 
