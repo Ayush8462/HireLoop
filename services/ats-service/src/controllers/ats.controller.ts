@@ -43,3 +43,42 @@ export const uploadAndScoreResume = async (
     return res.status(500).json({ success: false, message });
   }
 };
+
+export const scoreResumeUrl = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { url } = req.body as { url?: string };
+    if (!url) {
+      return res.status(400).json({ success: false, message: "Resume URL is required" });
+    }
+
+    let buffer: Buffer;
+    if (url.startsWith("data:application/pdf;base64,")) {
+      const base64Data = url.replace("data:application/pdf;base64,", "");
+      buffer = Buffer.from(base64Data, "base64");
+    } else {
+      const response = await fetch(url);
+      if (!response.ok) {
+        return res.status(400).json({ success: false, message: "Failed to download PDF from URL" });
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    }
+
+    const text = await extractTextFromPDF(buffer);
+    const analysis = calculateAtsScore(text);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        fileUrl: url,
+        fileSize: buffer.length,
+        extractedTextPreview: text.substring(0, 300) + "...",
+        ...analysis,
+      },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    return res.status(500).json({ success: false, message });
+  }
+};
+

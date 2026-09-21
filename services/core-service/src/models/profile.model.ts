@@ -29,6 +29,10 @@ export interface IProfile {
 
   skills: string[];
 
+  resumeUrl?: string;
+  resumeFileName?: string;
+  atsScore?: number;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -139,6 +143,23 @@ const profileSchema = new Schema<IProfile>(
     skills: {
       type: [String],
       default: [],
+    },
+
+    resumeUrl: {
+      type: String,
+      trim: true,
+    },
+
+    resumeFileName: {
+      type: String,
+      trim: true,
+      maxlength: 255,
+    },
+
+    atsScore: {
+      type: Number,
+      min: 0,
+      max: 100,
     },
   },
   {

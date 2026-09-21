@@ -44,6 +44,8 @@ services:
       - "5002:5002"
     env_file:
       - ./services/core-service/.env
+    environment:
+      - ATS_SERVICE_URL=http://ats-service:5003
     networks:
       - hireloop-network
 

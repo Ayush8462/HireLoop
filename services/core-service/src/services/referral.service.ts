@@ -11,6 +11,8 @@ interface RequestReferralInput {
   jobTitle: string;
   jobUrl?: string;
   message?: string;
+  resumeUrl?: string;
+  resumeFileName?: string;
 }
 
 export class ReferralService {
@@ -68,6 +70,8 @@ export class ReferralService {
       jobTitle: data.jobTitle,
       jobUrl: data.jobUrl,
       message: data.message,
+      resumeUrl: data.resumeUrl || studentProfile.resumeUrl,
+      resumeFileName: data.resumeFileName || studentProfile.resumeFileName,
       status: ReferralStatus.PENDING,
     });
   }

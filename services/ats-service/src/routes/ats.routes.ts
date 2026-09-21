@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
-import { scoreText, uploadAndScoreResume } from "../controllers/ats.controller.js";
+import { scoreText, uploadAndScoreResume, scoreResumeUrl } from "../controllers/ats.controller.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -21,6 +21,8 @@ router.get("/health", (_req: Request, res: Response) => {
 });
 
 router.post("/score", scoreText);
+
+router.post("/score-url", scoreResumeUrl);
 
 router.post("/upload", upload.single("resume"), uploadAndScoreResume);
 

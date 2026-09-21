@@ -11,3 +11,6 @@ export const uploadAndScoreResume = (file) => {
 };
 
 export const scoreText = (text) => API.post("/api/ats/score", { text });
+
+export const scoreResumeUrl = (url) => API.post("/api/ats/score-url", { url });
+

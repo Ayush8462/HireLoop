@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -6,11 +7,11 @@ import {
   Sun, User, X, CheckCircle2, AlertCircle,
   LogOut, LayoutDashboard,
   Menu, Send, ExternalLink,
-  Pencil, Briefcase
+  Pencil, Briefcase, Download, Eye, Sparkles, Check, FileCheck
 } from "lucide-react";
 import { logout } from "../../api/auth.js";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { getMyProfile, updateMyProfile, createProfile } from "../../api/profile.js";
+import { getMyProfile, updateMyProfile, createProfile, getResumeViewUrl, getResumeDownloadUrl } from "../../api/profile.js";
 import { getAllCompanies } from "../../api/company.js";
 import {
   createSlot,
@@ -21,7 +22,7 @@ import {
   getInterviewStats
 } from "../../api/interview.js";
 import { getMyReceivedReferrals, updateReferralStatus } from "../../api/referral.js";
-import { uploadAndScoreResume } from "../../api/ats.js";
+import { uploadAndScoreResume, scoreResumeUrl } from "../../api/ats.js";
 
 /* ─────────────────────────── Default Companies ─────────────────────────────── */
 const DEFAULT_COMPANIES = [
@@ -93,6 +94,13 @@ export default function SeniorDashboard() {
   // ATS State (Senior Resume Checker tool)
   const [atsLoading, setAtsLoading] = useState(false);
   const [atsResult, setAtsResult] = useState(null);
+
+  // Senior Referral Review & ATS Reviewer State
+  const [reviewReferral, setReviewReferral] = useState(null);
+  const [reviewAtsLoading, setReviewAtsLoading] = useState(false);
+  const [reviewAtsResult, setReviewAtsResult] = useState(null);
+  const [resumeViewerUrl, setResumeViewerUrl] = useState("");
+  const [resumeViewerTitle, setResumeViewerTitle] = useState("");
 
   const toast$ = (msg, type = "success") => {
     setToast({ msg, type });
@@ -337,10 +345,15 @@ export default function SeniorDashboard() {
       return;
     }
     setAtsLoading(true);
+    const localPreviewUrl = URL.createObjectURL(file);
     try {
       const r = await uploadAndScoreResume(file);
       if (r.data?.success) {
-        setAtsResult(r.data.data);
+        setAtsResult({
+          ...r.data.data,
+          fileName: file.name,
+          fileUrl: localPreviewUrl,
+        });
         toast$("Resume analyzed and scored!", "success");
         setTab("ats");
       }
@@ -348,6 +361,51 @@ export default function SeniorDashboard() {
       toast$(err.response?.data?.message || "Failed to analyze resume", "error");
     } finally {
       setAtsLoading(false);
+      e.target.value = "";
+    }
+  };
+
+  const openReferralReview = (ref) => {
+    setReviewReferral(ref);
+    setReviewAtsResult(null);
+    const student = ref?.studentId || {};
+    const url = ref?.resumeUrl || student?.resumeUrl || "";
+    const title = `${student?.firstName || "Candidate"} - ${ref?.jobTitle || "Resume"}`;
+    setResumeViewerUrl(url);
+    setResumeViewerTitle(title);
+  };
+
+  const closeReferralReview = () => {
+    setReviewReferral(null);
+    setReviewAtsResult(null);
+    setResumeViewerUrl("");
+    setResumeViewerTitle("");
+  };
+
+  const openResumeViewer = (url, title = "Candidate Resume") => {
+    if (!url) return;
+    setResumeViewerUrl(url);
+    setResumeViewerTitle(title);
+  };
+
+  const handleRunReviewAts = async () => {
+    const student = reviewReferral?.studentId || {};
+    const targetUrl = reviewReferral?.resumeUrl || student?.resumeUrl || resumeViewerUrl;
+    if (!targetUrl) {
+      toast$("No resume URL available for this candidate", "error");
+      return;
+    }
+    setReviewAtsLoading(true);
+    try {
+      const res = await scoreResumeUrl(targetUrl);
+      if (res.data?.success) {
+        setReviewAtsResult(res.data.data);
+        toast$("Applicant resume analyzed successfully with ATS algorithms!", "success");
+      }
+    } catch (err) {
+      toast$(err.response?.data?.message || "Failed to score candidate resume", "error");
+    } finally {
+      setReviewAtsLoading(false);
     }
   };
 
@@ -590,6 +648,51 @@ export default function SeniorDashboard() {
                   </p>
                 )}
 
+                {/* Candidate Resume Badge */}
+                {(() => {
+                  const cResumeUrl = r.resumeUrl || r.studentId?.resumeUrl;
+                  const cResumeName = r.resumeFileName || r.studentId?.resumeFileName || "Candidate_Resume.pdf";
+                  return cResumeUrl ? (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "6px 10px", margin: "8px 0" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                        <FileText size={14} color={T.green} />
+                        <span style={{ fontSize: 11, fontWeight: 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {cResumeName}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => openResumeViewer(cResumeUrl, cResumeName)}
+                          style={{ background: "transparent", border: "none", color: T.muted, display: "flex", padding: 2, cursor: "pointer" }}
+                          title="View Resume"
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <a
+                          href={getResumeDownloadUrl(cResumeUrl, cResumeName)}
+                          target="_blank"
+                          rel="noreferrer"
+                          download
+                          style={{ color: T.muted, display: "flex", padding: 2 }}
+                          title="Download Resume"
+                        >
+                          <Download size={13} />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => openReferralReview(r)}
+                          style={{ background: "#dcfce7", border: "none", color: "#166534", borderRadius: 6, padding: "3px 8px", fontSize: 10.5, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}
+                        >
+                          <Sparkles size={11} /> Review & ATS
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 10.5, color: T.muted, margin: "6px 0" }}>⚠️ No resume attached</div>
+                  );
+                })()}
+
                 <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
                   <button
                     onClick={() => handleUpdateReferral(r._id, "ACCEPTED")}
@@ -811,6 +914,63 @@ export default function SeniorDashboard() {
                         </div>
                       </div>
                     )}
+
+                    {/* Candidate Resume Section */}
+                    {(() => {
+                      const cResumeUrl = r.resumeUrl || student.resumeUrl;
+                      const cResumeName = r.resumeFileName || student.resumeFileName || "Candidate_Resume.pdf";
+                      return (
+                        <div style={{ marginTop: 12, padding: "10px 12px", background: T.surfaceAlt, borderRadius: 10, border: `1px solid ${T.border}` }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                            <div style={{ fontSize: 10.5, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "flex", alignItems: "center", gap: 5 }}>
+                              <FileText size={13} color={T.green} /> Attached Resume (Cloudinary)
+                            </div>
+                            {cResumeUrl && (
+                              <span style={{ fontSize: 10, fontWeight: 700, color: "#166534", background: "#dcfce7", padding: "1px 6px", borderRadius: 4 }}>
+                                Verified PDF
+                              </span>
+                            )}
+                          </div>
+
+                          {cResumeUrl ? (
+                            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 150 }}>
+                                {cResumeName}
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <button
+                                  type="button"
+                                  onClick={() => openResumeViewer(cResumeUrl, `${student.firstName || "Candidate"} Resume`)}
+                                  style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}
+                                >
+                                  <Eye size={12} /> View
+                                </button>
+                                <a
+                                  href={getResumeDownloadUrl(cResumeUrl, cResumeName)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  download
+                                  style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, textDecoration: "none", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}
+                                >
+                                  <Download size={12} /> Download
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => openReferralReview(r)}
+                                  style={{ background: "#dcfce7", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 6, padding: "4px 9px", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                >
+                                  <Sparkles size={12} /> Review & ATS
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 11.5, color: T.muted }}>
+                              No resume attached with this referral request.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Actions */}
@@ -1348,6 +1508,32 @@ export default function SeniorDashboard() {
             </span>
           </div>
 
+          {atsResult.matchedKeywords && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: T.muted, textTransform: "uppercase", marginBottom: 6 }}>
+                Matched Industry Keywords ({atsResult.matchedKeywords.length})
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                {atsResult.matchedKeywords.map((k) => (
+                  <span key={k} style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: "#dcfce7", color: "#166534" }}>{k}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {atsResult.missingKeywords && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: T.muted, textTransform: "uppercase", marginBottom: 6 }}>
+                Recommended Missing Keywords ({atsResult.missingKeywords.length})
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                {atsResult.missingKeywords.slice(0, 10).map((k) => (
+                  <span key={k} style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: "#fee2e2", color: "#b91c1c" }}>{k}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {atsResult.feedback && (
             <div style={{ fontSize: 12.5, color: T.muted, background: T.surfaceAlt, padding: 12, borderRadius: 10 }}>
               {atsResult.feedback}
@@ -1357,6 +1543,315 @@ export default function SeniorDashboard() {
       )}
     </div>
   );
+
+  /* Senior Referral Review & Candidate ATS Evaluator Modal */
+  const renderReferralReviewModal = () => {
+    if (!reviewReferral) return null;
+    const student = reviewReferral.studentId || {};
+    const comp = reviewReferral.companyId || {};
+    const cResumeUrl = reviewReferral.resumeUrl || student.resumeUrl || resumeViewerUrl;
+    const cResumeName = reviewReferral.resumeFileName || student.resumeFileName || "Candidate_Resume.pdf";
+
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
+        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, width: "100%", maxWidth: 1060, height: "88vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 25px 60px rgba(0,0,0,0.35)" }}>
+          {/* Modal Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 22px", borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: T.greenLight, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16 }}>
+                {(student.firstName?.[0] || "C") + (student.lastName?.[0] || "")}
+              </div>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: T.text }}>
+                    {student.firstName || "Applicant"} {student.lastName || ""}
+                  </span>
+                  <span style={{
+                    padding: "2px 8px", borderRadius: 6, fontSize: 10.5, fontWeight: 800,
+                    background:
+                      reviewReferral.status === "PENDING" ? "#fef3c7" :
+                      reviewReferral.status === "ACCEPTED" ? "#dcfce7" :
+                      reviewReferral.status === "SUBMITTED" ? "#dbeafe" : "#fee2e2",
+                    color:
+                      reviewReferral.status === "PENDING" ? "#d97706" :
+                      reviewReferral.status === "ACCEPTED" ? "#16a34a" :
+                      reviewReferral.status === "SUBMITTED" ? "#2563eb" : "#dc2626",
+                  }}>
+                    {reviewReferral.status}
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>
+                  Applying for <strong style={{ color: T.text }}>{reviewReferral.jobTitle}</strong> at {comp.name || seniorCompany} • {student.college || "University"} (Class of {student.graduationYear || "2026"})
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {cResumeUrl && (
+                <a
+                  href={getResumeDownloadUrl(cResumeUrl, cResumeName)}
+                  target="_blank"
+                  rel="noreferrer"
+                  download
+                  style={{ display: "inline-flex", alignItems: "center", gap: 5, background: T.surface, border: `1px solid ${T.border}`, color: T.text, textDecoration: "none", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700 }}
+                >
+                  <Download size={13} /> Download Resume
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={closeReferralReview}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: T.muted, padding: 4, display: "flex" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Split Body */}
+          <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1.1fr 0.9fr", overflow: "hidden" }}>
+            {/* Left: Candidate Resume PDF Viewer */}
+            <div style={{ background: "#1e293b", borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              <div style={{ padding: "10px 16px", background: "#0f172a", borderBottom: "1px solid #334155", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#e2e8f0", fontSize: 12, fontWeight: 600 }}>
+                  <FileText size={15} color="#4ade80" /> {cResumeName}
+                </div>
+                {cResumeUrl && (
+                  <a
+                    href={getResumeViewUrl(cResumeUrl, cResumeName)}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: 11, color: "#60a5fa", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}
+                  >
+                    Open Fullscreen <ExternalLink size={11} />
+                  </a>
+                )}
+              </div>
+              <div style={{ flex: 1, position: "relative" }}>
+                {cResumeUrl ? (
+                  <iframe
+                    src={getResumeViewUrl(cResumeUrl, cResumeName)}
+                    title="Candidate Resume"
+                    style={{ width: "100%", height: "100%", border: "none" }}
+                  />
+                ) : (
+                  <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#94a3b8", gap: 8 }}>
+                    <FileText size={36} />
+                    <div>No PDF resume URL found for this candidate</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right: ATS Evaluation & Referral Actions */}
+            <div style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto", padding: 22, gap: 16, background: T.surface }}>
+              {/* Note / Pitch */}
+              {reviewReferral.message && (
+                <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 12, padding: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", marginBottom: 4 }}>
+                    Candidate Pitch / Elevator Note
+                  </div>
+                  <div style={{ fontSize: 12.5, color: T.text, lineHeight: 1.5 }}>
+                    "{reviewReferral.message}"
+                  </div>
+                </div>
+              )}
+
+              {/* Senior ATS Evaluator Panel */}
+              <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: T.text, display: "flex", alignItems: "center", gap: 6 }}>
+                      <Sparkles size={15} color={T.green} /> ATS Score Reviewer
+                    </div>
+                    <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>
+                      Automated keyword match & placement readiness
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={reviewAtsLoading || !cResumeUrl}
+                    onClick={handleRunReviewAts}
+                    style={{
+                      background: T.green, color: "#fff", border: "none", borderRadius: 8,
+                      padding: "7px 12px", fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                      display: "flex", alignItems: "center", gap: 5, opacity: reviewAtsLoading ? 0.7 : 1,
+                    }}
+                  >
+                    <Sparkles size={12} /> {reviewAtsLoading ? "Evaluating..." : (reviewAtsResult ? "Re-evaluate ATS" : "Run ATS Score")}
+                  </button>
+                </div>
+
+                {reviewAtsResult ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 4 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: T.surface, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}` }}>
+                      <div>
+                        <div style={{ fontSize: 10.5, fontWeight: 700, color: T.muted, textTransform: "uppercase" }}>Benchmark Score</div>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: reviewAtsResult.score >= 80 ? "#dcfce7" : reviewAtsResult.score >= 60 ? "#fef3c7" : "#fee2e2", color: reviewAtsResult.score >= 80 ? "#166534" : reviewAtsResult.score >= 60 ? "#a16207" : "#b91c1c", marginTop: 4, display: "inline-block" }}>
+                          {reviewAtsResult.level || "Evaluated"}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 26, fontWeight: 900, color: reviewAtsResult.score >= 80 ? "#16a34a" : reviewAtsResult.score >= 60 ? "#d97706" : "#dc2626" }}>
+                        {reviewAtsResult.score}<span style={{ fontSize: 14, fontWeight: 700, color: T.muted }}>/100</span>
+                      </div>
+                    </div>
+
+                    {/* Matched Keywords */}
+                    <div>
+                      <div style={{ fontSize: 10.5, fontWeight: 700, color: T.muted, textTransform: "uppercase", marginBottom: 6 }}>
+                        Matched Skills & Keywords ({reviewAtsResult.matchedKeywords?.length || 0})
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                        {reviewAtsResult.matchedKeywords?.slice(0, 10).map((k) => (
+                          <span key={k} style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: "#dcfce7", color: "#166534" }}>
+                            {k}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Missing Keywords */}
+                    {reviewAtsResult.missingKeywords?.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 10.5, fontWeight: 700, color: T.muted, textTransform: "uppercase", marginBottom: 6 }}>
+                          Missing Keywords to Ask In Interview
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {reviewAtsResult.missingKeywords.slice(0, 8).map((k) => (
+                            <span key={k} style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: "#fee2e2", color: "#b91c1c" }}>
+                              {k}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: T.muted, background: T.surface, padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, textAlign: "center" }}>
+                    Click "Run ATS Score" to parse candidate resume keywords, sections, and technical fit for <strong>{reviewReferral.jobTitle}</strong>.
+                  </div>
+                )}
+              </div>
+
+              {/* Referral Decision Actions */}
+              <div style={{ marginTop: "auto", paddingTop: 14, borderTop: `1px solid ${T.border}` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", marginBottom: 8 }}>
+                  Senior Referral Decision
+                </div>
+
+                {reviewReferral.status === "PENDING" && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleUpdateReferral(reviewReferral._id, "ACCEPTED");
+                        closeReferralReview();
+                      }}
+                      style={{ flex: 1, padding: "10px 12px", borderRadius: 10, background: T.green, color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                    >
+                      Accept Referral
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleUpdateReferral(reviewReferral._id, "SUBMITTED");
+                        closeReferralReview();
+                      }}
+                      style={{ flex: 1.2, padding: "10px 12px", borderRadius: 10, background: "#2563eb", color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                    >
+                      Mark Submitted in Portal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleUpdateReferral(reviewReferral._id, "REJECTED");
+                        closeReferralReview();
+                      }}
+                      style={{ padding: "10px 12px", borderRadius: 10, background: "transparent", color: "#ef4444", border: "1px solid #ef4444", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                    >
+                      Decline
+                    </button>
+                  </div>
+                )}
+
+                {reviewReferral.status === "ACCEPTED" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleUpdateReferral(reviewReferral._id, "SUBMITTED");
+                      closeReferralReview();
+                    }}
+                    style={{ width: "100%", padding: "11px 14px", borderRadius: 10, background: "#2563eb", color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                  >
+                    ✓ Mark as Submitted in Internal Portal
+                  </button>
+                )}
+
+                {(reviewReferral.status === "SUBMITTED" || reviewReferral.status === "REJECTED") && (
+                  <div style={{ fontSize: 12.5, color: T.muted, textAlign: "center", fontWeight: 600, padding: 8, background: T.surfaceAlt, borderRadius: 8 }}>
+                    Referral request is finalized ({reviewReferral.status})
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /* Standalone Resume Document Viewer Modal */
+  const renderResumeViewerModal = () => {
+    if (!resumeViewerUrl || reviewReferral) return null;
+    const viewUrl = getResumeViewUrl(resumeViewerUrl, resumeViewerTitle || "Candidate_Resume.pdf");
+    const downloadUrl = getResumeDownloadUrl(resumeViewerUrl, resumeViewerTitle || "Candidate_Resume.pdf");
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, width: "100%", maxWidth: 850, height: "85vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 25px 50px rgba(0,0,0,0.35)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <FileText size={18} color={T.green} />
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{resumeViewerTitle || "Candidate Resume"}</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <a
+                href={viewUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, background: T.surface, border: `1px solid ${T.border}`, color: T.text, textDecoration: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700 }}
+              >
+                <ExternalLink size={13} /> Fullscreen
+              </a>
+              <a
+                href={downloadUrl}
+                target="_blank"
+                rel="noreferrer"
+                download
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, background: T.green, color: "#fff", textDecoration: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700 }}
+              >
+                <Download size={13} /> Download
+              </a>
+              <button
+                type="button"
+                onClick={() => setResumeViewerUrl("")}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: T.muted, padding: 4, display: "flex" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+          <div style={{ flex: 1, background: "#1e293b", position: "relative" }}>
+            <iframe
+              src={viewUrl}
+              title={resumeViewerTitle || "Candidate Resume"}
+              style={{ width: "100%", height: "100%", border: "none" }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: T.bg, color: T.text, fontFamily: "'Figtree', 'Inter', sans-serif" }}>
@@ -1372,6 +1867,9 @@ export default function SeniorDashboard() {
           {toast.msg}
         </div>
       )}
+
+      {renderReferralReviewModal()}
+      {renderResumeViewerModal()}
 
       {/* Desktop Sidebar */}
       <aside

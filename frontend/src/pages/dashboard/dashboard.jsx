@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -6,15 +7,16 @@ import {
   Sun, User, X, CheckCircle2, AlertCircle, Upload,
   LogOut, Building2, LayoutDashboard,
   Target, Menu, Send, ExternalLink,
-  ChevronLeft, Sparkles, Info, Pencil
+  ChevronLeft, Sparkles, Info, Pencil,
+  Download, Eye, FileCheck, FileUp, RefreshCw
 } from "lucide-react";
 import { logout } from "../../api/auth.js";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { getMyProfile, updateMyProfile, createProfile } from "../../api/profile.js";
+import { getMyProfile, updateMyProfile, createProfile, uploadProfileResume, getResumeViewUrl, getResumeDownloadUrl } from "../../api/profile.js";
 import { getAllCompanies, getCompanyRoadmaps } from "../../api/company.js";
 import { getAvailableSlots, bookInterview, getStudentHistory, cancelInterview } from "../../api/interview.js";
 import { getMySentReferrals, requestReferral, cancelReferral } from "../../api/referral.js";
-import { uploadAndScoreResume } from "../../api/ats.js";
+import { uploadAndScoreResume, scoreResumeUrl } from "../../api/ats.js";
 
 /* ─────────────────────────── Default Fallback Companies ────────────────────── */
 const DEFAULT_COMPANIES = [
@@ -289,6 +291,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { logoutUser } = useAuth();
   const fileRef = useRef(null);
+  const profileResumeInputRef = useRef(null);
+  const referralResumeInputRef = useRef(null);
 
   // Appearance & navigation state
   const [dark, setDark] = useState(() => localStorage.getItem("hireloop_theme") === "dark");
@@ -313,6 +317,19 @@ export default function Dashboard() {
   const [atsLoading, setAtsLoading] = useState(false);
   const [atsResult, setAtsResult] = useState(null);
 
+  // Resume Modal & Upload state
+  const [resumeModalOpen, setResumeModalOpen] = useState(false);
+  const [resumeModalUrl, setResumeModalUrl] = useState("");
+  const [resumeModalTitle, setResumeModalTitle] = useState("Resume");
+  const [resumeUploading, setResumeUploading] = useState(false);
+
+  const openResumeModal = (url, title = "Resume Preview") => {
+    if (!url) return;
+    setResumeModalUrl(url);
+    setResumeModalTitle(title);
+    setResumeModalOpen(true);
+  };
+
   // Profile form state
   const [pForm, setPForm] = useState({
     firstName: "",
@@ -325,6 +342,9 @@ export default function Dashboard() {
     bio: "",
     skillInput: "",
     skills: [],
+    resumeUrl: "",
+    resumeFileName: "",
+    atsScore: null,
   });
   const [pSaving, setPSaving] = useState(false);
 
@@ -341,6 +361,8 @@ export default function Dashboard() {
     jobTitle: "",
     jobUrl: "",
     message: "",
+    resumeUrl: "",
+    resumeFileName: "",
   });
   const [referralSubmitting, setReferralSubmitting] = useState(false);
 
@@ -384,7 +406,25 @@ export default function Dashboard() {
           bio: p.bio || "",
           skillInput: "",
           skills: p.skills || [],
+          resumeUrl: p.resumeUrl || "",
+          resumeFileName: p.resumeFileName || "",
+          atsScore: p.atsScore || null,
         });
+        if (p.resumeUrl) {
+          setReferralForm((rf) => ({
+            ...rf,
+            resumeUrl: p.resumeUrl,
+            resumeFileName: p.resumeFileName || "Student_Resume.pdf",
+          }));
+        }
+        if (p.atsScore) {
+          setAtsResult((prev) => prev || {
+            score: p.atsScore,
+            fileName: p.resumeFileName || "Student_Resume.pdf",
+            fileUrl: p.resumeUrl,
+            level: p.atsScore >= 80 ? "Top Tier Readiness" : p.atsScore >= 60 ? "Interview Ready" : "Needs Revision",
+          });
+        }
         setIsEditingProfile(false);
       } else {
         setIsEditingProfile(true);
@@ -438,7 +478,7 @@ export default function Dashboard() {
     navigate("/login", { replace: true });
   };
 
-  // ATS Resume Upload
+  // ATS Resume Upload & Scan (Standalone scanner - does NOT upload to Cloudinary)
   const handleResume = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -447,15 +487,94 @@ export default function Dashboard() {
       return;
     }
     setAtsLoading(true);
+    const localPreviewUrl = URL.createObjectURL(file);
     try {
       const r = await uploadAndScoreResume(file);
       if (r.data?.success) {
-        setAtsResult(r.data.data);
+        setAtsResult({
+          ...r.data.data,
+          fileName: file.name,
+          fileUrl: localPreviewUrl,
+        });
         toast$("Resume analyzed and scored!", "success");
         setTab("ats");
       }
     } catch (err) {
       toast$(err.response?.data?.message || "Failed to analyze resume", "error");
+    } finally {
+      setAtsLoading(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  // Upload Resume to Cloudinary via Profile Service
+  const handleUploadProfileResume = async (file) => {
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast$("Please upload a PDF file only", "error");
+      return;
+    }
+    setResumeUploading(true);
+    try {
+      const res = await uploadProfileResume(file);
+      if (res.data?.success) {
+        const data = res.data.data;
+        const updated = data.profile || {
+          ...profile,
+          resumeUrl: data.resumeUrl,
+          resumeFileName: data.resumeFileName,
+          atsScore: data.atsScore,
+        };
+        setProfile(updated);
+        setPForm((f) => ({
+          ...f,
+          resumeUrl: data.resumeUrl,
+          resumeFileName: data.resumeFileName,
+          atsScore: data.atsScore,
+        }));
+        setReferralForm((rf) => ({
+          ...rf,
+          resumeUrl: data.resumeUrl,
+          resumeFileName: data.resumeFileName,
+        }));
+        toast$("Resume uploaded to Cloudinary successfully!", "success");
+        if (data.atsScore) {
+          setAtsResult({
+            score: data.atsScore,
+            fileName: data.resumeFileName || file.name,
+            fileUrl: data.resumeUrl,
+            level: data.atsScore >= 80 ? "Top Tier Readiness" : data.atsScore >= 60 ? "Interview Ready" : "Needs Revision",
+          });
+        }
+      }
+    } catch (err) {
+      toast$(err.response?.data?.message || "Failed to upload resume", "error");
+    } finally {
+      setResumeUploading(false);
+    }
+  };
+
+  // Score Resume from profile URL
+  const handleScoreProfileResume = async () => {
+    const targetUrl = profile?.resumeUrl || pForm.resumeUrl;
+    if (!targetUrl) {
+      toast$("Please upload a resume first", "error");
+      return;
+    }
+    setAtsLoading(true);
+    try {
+      const r = await scoreResumeUrl(targetUrl);
+      if (r.data?.success) {
+        setAtsResult({
+          ...r.data.data,
+          fileName: profile?.resumeFileName || pForm.resumeFileName || "Profile_Resume.pdf",
+          fileUrl: targetUrl,
+        });
+        toast$("Profile resume analyzed successfully!", "success");
+        setTab("ats");
+      }
+    } catch (err) {
+      toast$(err.response?.data?.message || "Failed to score profile resume", "error");
     } finally {
       setAtsLoading(false);
     }
@@ -476,6 +595,9 @@ export default function Dashboard() {
         graduationYear: pForm.graduationYear ? Number(pForm.graduationYear) : undefined,
         bio: pForm.bio,
         skills: pForm.skills,
+        resumeUrl: pForm.resumeUrl || profile?.resumeUrl || undefined,
+        resumeFileName: pForm.resumeFileName || profile?.resumeFileName || undefined,
+        atsScore: pForm.atsScore || profile?.atsScore || undefined,
       };
       const r = profile
         ? await updateMyProfile(payload)
@@ -494,6 +616,9 @@ export default function Dashboard() {
           bio: updated.bio || "",
           skillInput: "",
           skills: updated.skills || [],
+          resumeUrl: updated.resumeUrl || "",
+          resumeFileName: updated.resumeFileName || "",
+          atsScore: updated.atsScore || null,
         });
         setIsEditingProfile(false);
         toast$("Profile saved successfully!", "success");
@@ -518,12 +643,15 @@ export default function Dashboard() {
         bio: profile.bio || "",
         skillInput: "",
         skills: profile.skills || [],
+        resumeUrl: profile.resumeUrl || "",
+        resumeFileName: profile.resumeFileName || "",
+        atsScore: profile.atsScore || null,
       });
       setIsEditingProfile(false);
     }
   };
 
-  // Booking a slot
+  // Confirm Mock Interview Booking
   const handleConfirmBooking = async () => {
     if (!bookingSlot) return;
     setBookingLoading(true);
@@ -568,10 +696,20 @@ export default function Dashboard() {
         jobTitle: referralForm.jobTitle,
         jobUrl: referralForm.jobUrl || undefined,
         message: referralForm.message || undefined,
+        resumeUrl: referralForm.resumeUrl || profile?.resumeUrl || undefined,
+        resumeFileName: referralForm.resumeFileName || profile?.resumeFileName || undefined,
       });
       toast$("Referral request sent successfully!", "success");
       setReferralModalOpen(false);
-      setReferralForm({ seniorId: "", companyId: "", jobTitle: "", jobUrl: "", message: "" });
+      setReferralForm({
+        seniorId: "",
+        companyId: "",
+        jobTitle: "",
+        jobUrl: "",
+        message: "",
+        resumeUrl: profile?.resumeUrl || "",
+        resumeFileName: profile?.resumeFileName || "",
+      });
       fetchData();
     } catch (err) {
       toast$(err.response?.data?.message || err.response?.data?.error?.message || "Failed to submit referral request", "error");
@@ -806,6 +944,80 @@ export default function Dashboard() {
           </div>
           <div style={{ fontSize: 11.5, color: "#7c3aed", fontWeight: 600, marginTop: 4 }}>
             {atsResult?.level || "Placement Ready"}
+          </div>
+        </div>
+      </div>
+
+      {/* Placement Resume Card */}
+      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: "20px 24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: T.greenLight, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <FileText size={22} color={T.green} />
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: T.text }}>Placement Resume</span>
+                {profile?.resumeUrl ? (
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#dcfce7", color: "#166534" }}>
+                    Active & Stored in Cloud
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#fef3c7", color: "#b45309" }}>
+                    Not Uploaded
+                  </span>
+                )}
+                {profile?.atsScore && (
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#ede9fe", color: "#6d28d9" }}>
+                    ATS: {profile.atsScore}/100
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>
+                {profile?.resumeUrl
+                  ? `File: ${profile.resumeFileName || "Student_Resume.pdf"} • Attached to outgoing referrals`
+                  : "Upload your PDF resume in My Profile to request referrals and get instant ATS readiness scoring."}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {profile?.resumeUrl ? (
+              <>
+                <button
+                  onClick={() => openResumeModal(profile.resumeUrl, profile.resumeFileName)}
+                  style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, color: T.text, borderRadius: 10, padding: "8px 14px", fontSize: 12.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+                >
+                  <Eye size={14} color={T.green} /> View Resume
+                </button>
+                <a
+                  href={getResumeDownloadUrl(profile.resumeUrl, profile.resumeFileName || "Resume.pdf")}
+                  download={profile.resumeFileName || "Resume.pdf"}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, color: T.text, borderRadius: 10, padding: "8px 14px", fontSize: 12.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer", textDecoration: "none" }}
+                >
+                  <Download size={14} color="#2563eb" /> Download
+                </a>
+                <button
+                  onClick={handleScoreProfileResume}
+                  disabled={atsLoading}
+                  style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, color: T.text, borderRadius: 10, padding: "8px 14px", fontSize: 12.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+                >
+                  <Sparkles size={14} color="#7c3aed" /> Score on ATS
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  setTab("profile");
+                  setIsEditingProfile(true);
+                }}
+                style={{ background: T.green, color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+              >
+                <User size={15} /> Upload in My Profile
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1167,6 +1379,87 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Resume Upload (Cloudinary) */}
+            <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text, display: "flex", alignItems: "center", gap: 6 }}>
+                    <FileText size={16} color={T.green} /> Placement Resume (PDF)
+                  </div>
+                  <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>
+                    Upload your latest resume to Cloudinary for ATS scoring and senior referral reviews
+                  </div>
+                </div>
+              </div>
+
+              <input
+                ref={profileResumeInputRef}
+                type="file"
+                accept=".pdf"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleUploadProfileResume(f);
+                }}
+              />
+
+              {pForm.resumeUrl ? (
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <FileCheck size={18} color="#166534" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+                        {pForm.resumeFileName || "Student_Resume.pdf"}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                        <span style={{ fontSize: 10.5, fontWeight: 700, color: "#166534", background: "#dcfce7", padding: "1px 6px", borderRadius: 4 }}>
+                          ☁ Cloudinary Stored
+                        </span>
+                        {pForm.atsScore && (
+                          <span style={{ fontSize: 10.5, fontWeight: 700, color: "#1d4ed8", background: "#dbeafe", padding: "1px 6px", borderRadius: 4 }}>
+                            ATS: {pForm.atsScore}/100
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => openResumeModal(pForm.resumeUrl, pForm.resumeFileName || "Resume Preview")}
+                      style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, color: T.text, borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
+                    >
+                      <Eye size={13} /> View
+                    </button>
+                    <button
+                      type="button"
+                      disabled={resumeUploading}
+                      onClick={() => profileResumeInputRef.current?.click()}
+                      style={{ background: T.green, border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, opacity: resumeUploading ? 0.7 : 1 }}
+                    >
+                      <RefreshCw size={13} className={resumeUploading ? "animate-spin" : ""} />
+                      {resumeUploading ? "Uploading..." : "Replace PDF"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={resumeUploading}
+                  onClick={() => profileResumeInputRef.current?.click()}
+                  style={{ width: "100%", border: `1.5px dashed ${T.border}`, borderRadius: 10, padding: "18px 12px", background: T.surface, color: T.text, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}
+                >
+                  <Upload size={22} color={T.green} />
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>
+                    {resumeUploading ? "Uploading to Cloudinary..." : "Click to select and upload PDF resume"}
+                  </div>
+                  <div style={{ fontSize: 11, color: T.muted }}>Max file size 10MB</div>
+                </button>
+              )}
+            </div>
+
             <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
               {profile && (
                 <button
@@ -1233,6 +1526,107 @@ export default function Dashboard() {
               <Pencil size={15} /> Edit Profile
             </button>
           </div>
+        </div>
+
+        {/* Placement Resume Card */}
+        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <FileText size={18} color={T.green} />
+              <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Placement Resume & ATS Status</span>
+            </div>
+            <input
+              ref={profileResumeInputRef}
+              type="file"
+              accept=".pdf"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleUploadProfileResume(f);
+              }}
+            />
+            <button
+              onClick={() => profileResumeInputRef.current?.click()}
+              disabled={resumeUploading}
+              style={{
+                background: T.surfaceAlt, color: T.text, border: `1px solid ${T.border}`, borderRadius: 10,
+                padding: "7px 13px", fontWeight: 600, fontSize: 12, display: "flex", alignItems: "center", gap: 5, cursor: "pointer",
+              }}
+            >
+              <FileUp size={14} color={T.green} /> {profile.resumeUrl ? "Update Resume" : "Upload Resume"}
+            </button>
+          </div>
+
+          {profile.resumeUrl ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 16px", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <FileCheck size={22} color="#166534" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
+                      {profile.resumeFileName || "Placement_Resume.pdf"}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#166534", background: "#dcfce7", padding: "2px 8px", borderRadius: 999 }}>
+                        ☁ Cloudinary Verified
+                      </span>
+                      {profile.atsScore ? (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: profile.atsScore >= 75 ? "#166534" : "#b45309", background: profile.atsScore >= 75 ? "#dcfce7" : "#fef3c7", padding: "2px 8px", borderRadius: 999 }}>
+                          ATS Score: {profile.atsScore}/100
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, color: T.muted }}>ATS score pending</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => openResumeModal(profile.resumeUrl, profile.resumeFileName || "Placement Resume")}
+                    style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, borderRadius: 9, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
+                  >
+                    <Eye size={14} /> Preview
+                  </button>
+                  <a
+                    href={getResumeDownloadUrl(profile.resumeUrl, profile.resumeFileName || "Placement_Resume.pdf")}
+                    target="_blank"
+                    rel="noreferrer"
+                    download
+                    style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, textDecoration: "none", borderRadius: 9, padding: "7px 12px", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}
+                  >
+                    <Download size={14} /> Download
+                  </a>
+                  <button
+                    type="button"
+                    disabled={atsLoading}
+                    onClick={handleScoreProfileResume}
+                    style={{ background: T.green, border: "none", color: "#fff", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
+                  >
+                    <Sparkles size={13} /> {atsLoading ? "Scoring..." : "ATS Review"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ background: T.surfaceAlt, border: `1.5px dashed ${T.border}`, borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
+              <Upload size={28} color={T.muted} style={{ margin: "0 auto 8px" }} />
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text }}>No resume uploaded yet</div>
+              <div style={{ fontSize: 12, color: T.muted, margin: "4px 0 12px" }}>
+                Upload your PDF resume to store it securely on Cloudinary and attach it to job referral requests.
+              </div>
+              <button
+                type="button"
+                onClick={() => profileResumeInputRef.current?.click()}
+                style={{ background: T.green, color: "#fff", border: "none", borderRadius: 10, padding: "8px 18px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+              >
+                Upload PDF Resume
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Academic Details Card */}
@@ -1649,79 +2043,215 @@ export default function Dashboard() {
 
   /* 6. ATS Resume Scanner View */
   const renderATSView = () => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 680 }}>
-      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 28 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: "0 0 6px" }}>Resume ATS Scanner</h2>
-        <p style={{ fontSize: 13, color: T.muted, margin: "0 0 20px" }}>
-          Upload your PDF resume to evaluate keyword match, layout sections, and placement readiness score.
-        </p>
-
-        <input ref={fileRef} type="file" accept=".pdf" style={{ display: "none" }} onChange={handleResume} />
-
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={atsLoading}
-          style={{ width: "100%", border: `2px dashed ${T.green}`, borderRadius: 16, padding: "36px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, background: T.greenLight, cursor: "pointer", opacity: atsLoading ? 0.7 : 1 }}
-        >
-          {atsLoading ? (
-            <div style={{ width: 32, height: 32, border: `3px solid ${T.green}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-          ) : (
-            <Upload size={28} color={T.green} />
-          )}
+    <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: atsResult ? 1160 : 720, width: "100%" }}>
+      {/* Top Header & Upload Bar */}
+      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: "24px 28px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 14, marginBottom: 16 }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: T.text }}>
-              {atsLoading ? "Scanning and Scoring Resume..." : "Click to upload PDF resume"}
-            </div>
-            <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>Supports .pdf files up to 10MB</div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: "0 0 4px" }}>Resume ATS Scanner & Live Review</h2>
+            <p style={{ fontSize: 13, color: T.muted, margin: 0 }}>
+              Scan your resume to verify keyword density, structure, and placement readiness score.
+            </p>
           </div>
-        </button>
+          <input ref={fileRef} type="file" accept=".pdf" style={{ display: "none" }} onChange={handleResume} />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={atsLoading}
+            style={{
+              background: T.green, color: "#fff", border: "none", borderRadius: 11,
+              padding: "10px 18px", fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 7, cursor: "pointer",
+              opacity: atsLoading ? 0.7 : 1,
+            }}
+          >
+            <Upload size={16} /> {atsLoading ? "Scanning..." : "Upload New PDF"}
+          </button>
+        </div>
+
+        {/* Saved Profile Resume Shortcut */}
+        {profile?.resumeUrl && (
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12, background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <FileCheck size={18} color="#166534" />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+                  {profile.resumeFileName || "Student_Profile_Resume.pdf"}
+                </div>
+                <div style={{ fontSize: 11.5, color: T.muted, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>Profile Resume (Cloudinary)</span>
+                  {profile.atsScore && <span style={{ fontWeight: 700, color: "#166534" }}>• Previous ATS Score: {profile.atsScore}/100</span>}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => openResumeModal(profile.resumeUrl, profile.resumeFileName || "Profile Resume")}
+                style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
+              >
+                <Eye size={13} /> View
+              </button>
+              <button
+                type="button"
+                disabled={atsLoading}
+                onClick={handleScoreProfileResume}
+                style={{ background: "#dcfce7", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
+              >
+                <Sparkles size={13} /> {atsLoading ? "Analyzing..." : "Re-Scan Saved Resume"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!profile?.resumeUrl && !atsResult && (
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={atsLoading}
+            style={{ width: "100%", border: `2px dashed ${T.green}`, borderRadius: 14, padding: "36px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, background: T.greenLight, cursor: "pointer", opacity: atsLoading ? 0.7 : 1, marginTop: 10 }}
+          >
+            {atsLoading ? (
+              <div style={{ width: 32, height: 32, border: `3px solid ${T.green}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+            ) : (
+              <Upload size={28} color={T.green} />
+            )}
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: T.text }}>
+                {atsLoading ? "Scanning and Scoring Resume..." : "Click to upload PDF resume"}
+              </div>
+              <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>Supports .pdf files up to 10MB</div>
+            </div>
+          </button>
+        )}
       </div>
 
+      {/* ATS Side-by-Side: Resume Preview & Score Breakdown */}
       {atsResult && (
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 28 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: T.text }}>ATS Placement Readiness</h3>
-              <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{atsResult.wordCount} words detected</div>
-            </div>
-            <span style={{ fontSize: 32, fontWeight: 900, color: atsResult.score >= 80 ? "#16a34a" : atsResult.score >= 60 ? "#d97706" : "#dc2626" }}>
-              {atsResult.score}/100
-            </span>
-          </div>
-
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, background: atsResult.score >= 80 ? "#dcfce7" : atsResult.score >= 60 ? "#fef3c7" : "#fee2e2", color: atsResult.score >= 80 ? "#166534" : atsResult.score >= 60 ? "#a16207" : "#b91c1c", marginBottom: 18 }}>
-            <CheckCircle2 size={13} /> {atsResult.level}
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Matched Keywords ({atsResult.matchedKeywords?.length || 0})</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {atsResult.matchedKeywords?.map((k) => (
-                <span key={k} style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: "#dcfce7", color: "#166534" }}>{k}</span>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Recommended Missing Keywords ({atsResult.missingKeywords?.length || 0})</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {atsResult.missingKeywords?.slice(0, 10).map((k) => (
-                <span key={k} style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: "#fee2e2", color: "#b91c1c" }}>{k}</span>
-              ))}
-            </div>
-          </div>
-
-          {atsResult.recommendations?.length > 0 && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Actionable Recommendations</div>
-              {atsResult.recommendations.map((r, i) => (
-                <div key={i} style={{ fontSize: 13, color: T.text, display: "flex", gap: 8, marginBottom: 6 }}>
-                  <span style={{ color: T.green }}>•</span>
-                  <span>{r}</span>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: 20, alignItems: "start" }}>
+          {/* Left Column: Live Resume Preview */}
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 22, display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${T.border}`, paddingBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <FileText size={18} color={T.green} />
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
+                    {atsResult.fileName || "Scored Resume Document"}
+                  </div>
+                  <div style={{ fontSize: 11, color: T.muted }}>PDF Document View</div>
                 </div>
-              ))}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {atsResult.fileUrl && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => openResumeModal(atsResult.fileUrl, atsResult.fileName || "Resume Preview")}
+                      style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, color: T.text, borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <Eye size={13} /> Fullscreen
+                    </button>
+                    <a
+                      href={getResumeDownloadUrl(atsResult.fileUrl, atsResult.fileName || "Scored_Resume.pdf")}
+                      target="_blank"
+                      rel="noreferrer"
+                      download
+                      style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, color: T.text, textDecoration: "none", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <Download size={13} /> Download
+                    </a>
+                  </>
+                )}
+              </div>
             </div>
-          )}
+
+            {atsResult.fileUrl ? (
+              <div style={{ width: "100%", height: 580, borderRadius: 12, overflow: "hidden", background: "#1e293b", border: `1px solid ${T.border}`, position: "relative" }}>
+                <iframe
+                  src={getResumeViewUrl(atsResult.fileUrl, atsResult.fileName || "Scored_Resume.pdf")}
+                  title="ATS Resume Document"
+                  style={{ width: "100%", height: "100%", border: "none" }}
+                />
+              </div>
+            ) : (
+              <div style={{ height: 260, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: T.surfaceAlt, borderRadius: 12, gap: 8 }}>
+                <FileText size={32} color={T.muted} />
+                <div style={{ fontSize: 13, color: T.muted }}>Resume preview not available</div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Score & Placement Breakdown */}
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 26, display: "flex", flexDirection: "column", gap: 18 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: T.text }}>ATS Score & Analysis</h3>
+                <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{atsResult.wordCount || "N/A"} words evaluated</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <span style={{ fontSize: 36, fontWeight: 900, color: atsResult.score >= 80 ? "#16a34a" : atsResult.score >= 60 ? "#d97706" : "#dc2626", lineHeight: 1 }}>
+                  {atsResult.score}
+                </span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: T.muted }}>/100</span>
+              </div>
+            </div>
+
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, background: atsResult.score >= 80 ? "#dcfce7" : atsResult.score >= 60 ? "#fef3c7" : "#fee2e2", color: atsResult.score >= 80 ? "#166534" : atsResult.score >= 60 ? "#a16207" : "#b91c1c", width: "fit-content" }}>
+              <CheckCircle2 size={14} /> {atsResult.level || (atsResult.score >= 80 ? "Top Tier Readiness" : atsResult.score >= 60 ? "Interview Ready" : "Needs Revision")}
+            </div>
+
+            {/* Matched Keywords */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                Matched Industry Keywords ({atsResult.matchedKeywords?.length || 0})
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {atsResult.matchedKeywords && atsResult.matchedKeywords.length > 0 ? (
+                  atsResult.matchedKeywords.map((k) => (
+                    <span key={k} style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: "#dcfce7", color: "#166534" }}>
+                      {k}
+                    </span>
+                  ))
+                ) : (
+                  <span style={{ fontSize: 12, color: T.muted }}>No keywords matched yet</span>
+                )}
+              </div>
+            </div>
+
+            {/* Missing Keywords */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                Recommended Missing Keywords ({atsResult.missingKeywords?.length || 0})
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {atsResult.missingKeywords && atsResult.missingKeywords.length > 0 ? (
+                  atsResult.missingKeywords.slice(0, 12).map((k) => (
+                    <span key={k} style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: "#fee2e2", color: "#b91c1c" }}>
+                      {k}
+                    </span>
+                  ))
+                ) : (
+                  <span style={{ fontSize: 12, color: T.muted }}>Great job! No critical keywords missing.</span>
+                )}
+              </div>
+            </div>
+
+            {/* Recommendations */}
+            {atsResult.recommendations?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                  Actionable Recommendations
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {atsResult.recommendations.map((r, i) => (
+                    <div key={i} style={{ fontSize: 13, color: T.text, display: "flex", gap: 8, lineHeight: 1.5 }}>
+                      <span style={{ color: T.green, fontWeight: 800 }}>•</span>
+                      <span>{r}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -1879,6 +2409,55 @@ export default function Dashboard() {
               />
             </label>
 
+            {/* Attached Placement Resume */}
+            <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 12, padding: 14 }}>
+              <input
+                ref={referralResumeInputRef}
+                type="file"
+                accept=".pdf"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleUploadProfileResume(f);
+                }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <FileText size={17} color="#166534" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+                      {referralForm.resumeFileName || profile?.resumeFileName || "Candidate Resume (PDF)"}
+                    </div>
+                    <div style={{ fontSize: 11, color: T.muted }}>
+                      {(referralForm.resumeUrl || profile?.resumeUrl) ? "Attached automatically for senior review & evaluation" : "No resume found. Upload to include with request."}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {(referralForm.resumeUrl || profile?.resumeUrl) ? (
+                    <button
+                      type="button"
+                      onClick={() => openResumeModal(referralForm.resumeUrl || profile?.resumeUrl, referralForm.resumeFileName || profile?.resumeFileName || "Candidate Resume")}
+                      style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <Eye size={13} /> Preview
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={resumeUploading}
+                    onClick={() => referralResumeInputRef.current?.click()}
+                    style={{ background: T.green, border: "none", color: "#fff", borderRadius: 8, padding: "5px 10px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                  >
+                    <Upload size={12} /> {resumeUploading ? "Uploading..." : (referralForm.resumeUrl || profile?.resumeUrl ? "Change" : "Upload")}
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
               <button
                 type="button"
@@ -1901,12 +2480,72 @@ export default function Dashboard() {
     );
   };
 
+  /* Resume Document Preview Modal */
+  const renderResumeModal = () => {
+    if (!resumeModalOpen || !resumeModalUrl) return null;
+    const viewUrl = getResumeViewUrl(resumeModalUrl, resumeModalTitle || "Resume.pdf");
+    const downloadUrl = getResumeDownloadUrl(resumeModalUrl, resumeModalTitle || "Resume.pdf");
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, width: "100%", maxWidth: 850, height: "85vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 25px 50px rgba(0,0,0,0.3)" }}>
+          {/* Modal Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${T.border}`, background: T.surfaceAlt }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 8, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <FileText size={18} color="#166534" />
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: T.text }}>{resumeModalTitle || "Candidate Resume"}</div>
+                <div style={{ fontSize: 11.5, color: T.muted }}>PDF Document Viewer</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <a
+                href={viewUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, background: T.surface, border: `1px solid ${T.border}`, color: T.text, textDecoration: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700 }}
+              >
+                <ExternalLink size={13} /> Fullscreen
+              </a>
+              <a
+                href={downloadUrl}
+                target="_blank"
+                rel="noreferrer"
+                download
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, background: T.green, color: "#fff", textDecoration: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700 }}
+              >
+                <Download size={13} /> Download
+              </a>
+              <button
+                type="button"
+                onClick={() => setResumeModalOpen(false)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: T.muted, padding: 4, display: "flex" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+          {/* Modal Viewer */}
+          <div style={{ flex: 1, background: "#1e293b", position: "relative" }}>
+            <iframe
+              src={viewUrl}
+              title={resumeModalTitle || "Resume Document"}
+              style={{ width: "100%", height: "100%", border: "none" }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   /* ─────────────────────────── Main Render ───────────────────────────────── */
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: T.bg, fontFamily: "Figtree, Inter, sans-serif" }}>
       <Toast message={toast.msg} type={toast.type} onClose={() => setToast({ msg: "", type: "success" })} />
       {renderBookingModal()}
       {renderReferralModal()}
+      {renderResumeModal()}
 
       {/* ── Desktop Sidebar ──────────────────────────────────────────────── */}
       <aside

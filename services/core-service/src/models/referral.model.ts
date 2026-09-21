@@ -25,6 +25,9 @@ export interface IReferral {
 
   message?: string;
 
+  resumeUrl?: string;
+  resumeFileName?: string;
+
   status: ReferralStatus;
 
   createdAt: Date;
@@ -73,6 +76,17 @@ const referralSchema = new Schema<IReferral>(
       type: String,
       trim: true,
       maxlength: 2000,
+    },
+
+    resumeUrl: {
+      type: String,
+      trim: true,
+    },
+
+    resumeFileName: {
+      type: String,
+      trim: true,
+      maxlength: 255,
     },
 
     status: {

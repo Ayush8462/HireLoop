@@ -11,6 +11,8 @@ export const requestReferralSchema = z.object({
     jobTitle: z.string().trim().min(2).max(200),
     jobUrl: z.string().trim().url().optional().or(z.literal("")),
     message: z.string().trim().max(2000).optional(),
+    resumeUrl: z.string().trim().optional(),
+    resumeFileName: z.string().trim().max(255).optional(),
   }),
   params: z.object({}),
   query: z.object({}),

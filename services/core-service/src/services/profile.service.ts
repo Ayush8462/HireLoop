@@ -1,9 +1,10 @@
 import { Types } from "mongoose";
 
 import { ProfileRole, IProfile } from "../models/profile.model.js";
-
+import { Resume } from "../models/resume.model.js";
 import { profileRepository } from "../respositories/profile.repository.js";
-
+import { uploadResumeBuffer } from "../config/cloudinary.js";
+import { logger } from "../config/logger.js";
 import { ApiError } from "../utils/api-error.js";
 
 interface CreateProfileInput {
@@ -27,6 +28,9 @@ interface CreateProfileInput {
   experienceYears?: number;
 
   skills?: string[];
+  resumeUrl?: string;
+  resumeFileName?: string;
+  atsScore?: number;
 }
 
 interface UpdateProfileInput {
@@ -44,6 +48,9 @@ interface UpdateProfileInput {
   designation?: string;
   experienceYears?: number;
   skills?: string[];
+  resumeUrl?: string;
+  resumeFileName?: string;
+  atsScore?: number;
 }
 
 const authRoleToProfileRole = (
@@ -132,6 +139,10 @@ export class ProfileService {
     experienceYears: data.experienceYears,
 
     skills: data.skills ?? [],
+
+    resumeUrl: data.resumeUrl,
+    resumeFileName: data.resumeFileName,
+    atsScore: data.atsScore,
   };
 
   return profileRepository.create(profileData);
@@ -201,6 +212,78 @@ export class ProfileService {
 
   return updatedProfile;
 }
+
+  async uploadResume(
+    authUserId: string,
+    file: Express.Multer.File,
+  ) {
+    const profile = await profileRepository.findByAuthUserId(authUserId);
+    if (!profile) {
+      throw new ApiError(404, "Profile not found. Please create a profile first.");
+    }
+
+    if (!file || !file.buffer) {
+      throw new ApiError(400, "No resume file uploaded");
+    }
+
+    if (file.mimetype !== "application/pdf") {
+      throw new ApiError(400, "Only PDF files are supported");
+    }
+
+    // 1. Upload to Cloudinary
+    const uploadResult = await uploadResumeBuffer(file.buffer, file.originalname);
+
+    // 2. Compute ATS score if ATS service is available
+    let atsScore: number | undefined;
+    try {
+      const atsServiceUrl = process.env.ATS_SERVICE_URL || "http://ats-service:5003";
+      const response = await fetch(`${atsServiceUrl}/score-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: uploadResult.secure_url }),
+      });
+      if (response.ok) {
+        const atsData = (await response.json()) as { success: boolean; data?: { score?: number } };
+        if (atsData.success && typeof atsData.data?.score === "number") {
+          atsScore = atsData.data.score;
+        }
+      }
+    } catch (atsErr) {
+      logger.warn({ atsErr }, "Optional ATS scoring failed during resume upload");
+    }
+
+    // 3. Update Profile
+    const updatedProfile = await profileRepository.updateByAuthUserId(authUserId, {
+      resumeUrl: uploadResult.secure_url,
+      resumeFileName: file.originalname,
+      ...(atsScore !== undefined && { atsScore }),
+    });
+
+    // 4. Save to Resume history collection
+    try {
+      const existingResumes = await Resume.find({ studentId: profile._id })
+        .sort({ version: -1 })
+        .limit(1);
+      const version = existingResumes.length > 0 ? existingResumes[0].version + 1 : 1;
+      await Resume.updateMany({ studentId: profile._id }, { isDefault: false });
+      await Resume.create({
+        studentId: profile._id,
+        fileName: file.originalname,
+        fileUrl: uploadResult.secure_url,
+        version,
+        isDefault: true,
+      });
+    } catch (histErr) {
+      logger.warn({ histErr }, "Failed to record resume version history");
+    }
+
+    return {
+      resumeUrl: uploadResult.secure_url,
+      resumeFileName: file.originalname,
+      atsScore,
+      profile: updatedProfile,
+    };
+  }
 }
 
 export const profileService = new ProfileService();

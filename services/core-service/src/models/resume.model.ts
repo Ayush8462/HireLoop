@@ -42,7 +42,6 @@ const resumeSchema = new Schema<IResume>(
       type: String,
       required: true,
       trim: true,
-      maxlength: 2048,
     },
 
     version: {

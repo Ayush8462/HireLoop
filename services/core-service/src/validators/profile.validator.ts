@@ -158,6 +158,26 @@ const createProfileFields = {
     )
     .max(50, "You can have a maximum of 50 skills")
     .optional(),
+
+  resumeUrl: optionalString(
+    z
+      .string()
+      .trim(),
+  ),
+
+  resumeFileName: optionalString(
+    z
+      .string()
+      .trim()
+      .max(255, "Resume file name cannot exceed 255 characters"),
+  ),
+
+  atsScore: optionalNumber(
+    z
+      .number()
+      .min(0, "ATS score cannot be negative")
+      .max(100, "ATS score cannot exceed 100"),
+  ),
 };
 
 /**
@@ -277,6 +297,26 @@ const updateProfileFields = {
     )
     .max(50, "You can have a maximum of 50 skills")
     .optional(),
+
+  resumeUrl: optionalString(
+    z
+      .string()
+      .trim(),
+  ),
+
+  resumeFileName: optionalString(
+    z
+      .string()
+      .trim()
+      .max(255, "Resume file name cannot exceed 255 characters"),
+  ),
+
+  atsScore: optionalNumber(
+    z
+      .number()
+      .min(0, "ATS score cannot be negative")
+      .max(100, "ATS score cannot exceed 100"),
+  ),
 };
 
 /**

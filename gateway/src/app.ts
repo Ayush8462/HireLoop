@@ -8,7 +8,13 @@ import proxyRoutes from "./routes/proxy.routes.js";
 
 const app = express();
 
-app.use(helmet());
+app.use(
+  helmet({
+    frameguard: false,
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: false,
+  })
+);
 
 const allowedOrigins = [
   env.clientUrl,
