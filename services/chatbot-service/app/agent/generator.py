@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import List, Optional, Tuple
 
 from app.config import settings
@@ -146,33 +147,84 @@ class ResponseGenerator:
         retrieved_results: List[RetrievalResult],
         intent: IntentType,
     ) -> str:
-        """Synthesizes structured, informative answers directly from top-ranked chunks."""
+        """Synthesizes concise, high-precision answers directly from the top matching chunk."""
         if not retrieved_results:
             return (
-                "I couldn't find exact matches for your query in the current knowledge base. "
-                "However, you can explore **Tech Roadmaps**, **Core CS Preparation**, **Subjective Interviews (STAR)**, "
-                "or **HireLoop Platform features** (Mock Interviews, Referrals, ATS Scanner)."
+                "I couldn't find exact matches for your query. "
+                "You can ask about **Company Roadmaps** (Google, Amazon), **Core CS** (OS, DBMS, CN), "
+                "or **HireLoop features** (Mock Interviews, Referrals, ATS Scanner)."
             )
 
         top_chunk = retrieved_results[0].chunk
-        lines: List[str] = []
+        raw_content = top_chunk.content.strip()
 
-        lines.append(f"Here is what you need to know about **{top_chunk.title}**:\n")
-        lines.append(top_chunk.content)
+        # Split content into individual points / sections
+        raw_items = [it.strip() for it in re.split(r"\n(?=\d+\.\s+)", raw_content) if it.strip()]
 
-        # If multiple relevant chunks, provide supplementary context
-        if len(retrieved_results) > 1:
-            second_chunk = retrieved_results[1].chunk
-            if retrieved_results[1].similarity_score > 0.25:
-                lines.append(f"\n\n#### Related Guidance: {second_chunk.title}\n")
-                lines.append(second_chunk.content)
+        intro_line = ""
+        structured_items = []
+        if raw_items:
+            first = raw_items[0]
+            if re.match(r"^\d+\.\s+", first):
+                structured_items = raw_items
+            else:
+                lines = first.split("\n", 1)
+                intro_line = lines[0].strip()
+                if len(lines) > 1 and lines[1].strip():
+                    structured_items = [it.strip() for it in re.split(r"\n(?=\d+\.\s+)", lines[1]) if it.strip()]
+                structured_items.extend(raw_items[1:])
+        else:
+            structured_items = [raw_content]
 
-        lines.append("\n\n---\n")
-        lines.append(
-            "> **Pro-Tip**: On HireLoop, you can book a 1-on-1 mock interview with verified seniors from top tech companies to practice and evaluate these concepts live!"
+        # Check if user query specifies sub-topics beyond the main title
+        title_tokens = set(re.findall(r"\b\w{3,}\b", top_chunk.title.lower()))
+        q_tokens = set(re.findall(r"\b\w{3,}\b", query.lower()))
+        stop_words = {
+            "how", "what", "why", "when", "where", "who", "which", "can", "could",
+            "tell", "explain", "give", "show", "help", "about", "with", "from",
+            "does", "done", "used", "using", "work", "works", "working", "need",
+            "know", "want", "like", "use", "for", "the", "and", "that", "this",
+            "interview", "interviews", "preparation", "prepare", "steps",
+        }
+        specific_q_tokens = (q_tokens - title_tokens) - stop_words
+
+        specific_matches = []
+        if specific_q_tokens:
+            for item in structured_items:
+                item_lower = item.lower()
+                overlap = sum(1 for t in specific_q_tokens if t in item_lower)
+                if overlap > 0:
+                    specific_matches.append((item, overlap))
+            specific_matches.sort(key=lambda x: x[1], reverse=True)
+
+        # If user targeted a specific sub-concept (e.g. "deadlock" inside OS, or "ACID" inside DBMS)
+        if specific_matches and specific_matches[0][1] >= 1 and len(specific_matches) < len(structured_items):
+            top_spec = specific_matches[0][1]
+            selected_items = [it for it, sc in specific_matches if sc >= top_spec][:2]
+        else:
+            # Topic-level framework or roadmap: keep the first 4 items in sequence
+            selected_items = structured_items[:4]
+
+        # Format output cleanly
+        output_lines = [f"### {top_chunk.title}\n"]
+
+        for item in selected_items:
+            cleaned_item = item.strip()
+            # Trim excessively long points to the most essential 2 sentences (ignoring numbering dots)
+            sentences = [x.strip() for x in re.split(r"(?<!\d)[.!?]\s+", cleaned_item) if x.strip()]
+            if len(sentences) > 2 and len(cleaned_item) > 220:
+                cleaned_item = ". ".join(sentences[:2]) + "."
+
+            # Ensure proper bullet formatting
+            if not cleaned_item.startswith(("-", "*", "1", "2", "3", "4", "5")):
+                cleaned_item = f"• {cleaned_item}"
+            output_lines.append(cleaned_item)
+
+        output_lines.append(
+            "\n> **Pro-Tip**: Practice these exact questions 1-on-1 with verified seniors on HireLoop!"
         )
 
-        return "".join(lines)
+        return "\n\n".join(output_lines)
 
 
 default_generator = ResponseGenerator()
