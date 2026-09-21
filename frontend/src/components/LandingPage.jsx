@@ -7,6 +7,7 @@ import {
   GraduationCap, Briefcase, ShieldCheck,
   Sun, Moon
 } from "lucide-react";
+import AIChatbotWidget from "./AIChatbotWidget";
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -102,15 +103,15 @@ export default function LandingPage() {
     >
       {/* Background Ambient Glows */}
       <div
-        className="absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[450px] rounded-full blur-[140px] pointer-events-none transition-opacity duration-300"
+        className="absolute -top-40 left-1/2 -translate-x-1/2 w-200 h-112.5 rounded-full blur-[140px] pointer-events-none transition-opacity duration-300"
         style={{ background: dark ? "rgba(16, 185, 129, 0.15)" : "rgba(34, 197, 94, 0.2)" }}
       />
       <div
-        className="absolute top-[45%] -left-40 w-[500px] h-[500px] rounded-full blur-[130px] pointer-events-none"
+        className="absolute top-[45%] -left-40 w-125 h-125 rounded-full blur-[130px] pointer-events-none"
         style={{ background: dark ? "rgba(20, 184, 166, 0.1)" : "rgba(20, 184, 166, 0.12)" }}
       />
       <div
-        className="absolute bottom-20 -right-40 w-[600px] h-[600px] rounded-full blur-[140px] pointer-events-none"
+        className="absolute bottom-20 -right-40 w-150 h-150 rounded-full blur-[140px] pointer-events-none"
         style={{ background: dark ? "rgba(4, 120, 87, 0.1)" : "rgba(34, 197, 94, 0.12)" }}
       />
 
@@ -218,7 +219,7 @@ export default function LandingPage() {
               );
             })}
 
-            <div className="h-4 w-[1px] mx-2" style={{ background: T.border }} />
+            <div className="h-4 w-px mx-2" style={{ background: T.border }} />
 
             {/* Theme Toggle Button */}
             <button
@@ -791,6 +792,9 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* HireLoop AI Career Mentor Chatbot Widget (Landing Page ONLY) */}
+      <AIChatbotWidget dark={dark} />
     </div>
   );
 }

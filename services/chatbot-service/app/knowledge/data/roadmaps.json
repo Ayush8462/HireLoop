@@ -1,0 +1,37 @@
+[
+  {
+    "id": "roadmap-google-sde",
+    "title": "Google SDE Campus & Off-Campus Interview Roadmap",
+    "category": "company_roadmap",
+    "tags": ["google", "sde", "roadmap", "dsa", "oa", "algorithms", "graph", "dynamic programming"],
+    "content": "Google SDE Interview Process consists of 4 distinct preparation stages:\n1. Stage 1: Online Coding Assessment (OA) - 90 minutes timed round on Google's platform featuring 2 algorithmic problems (typically LeetCode Medium to Hard). Primary topics include Arrays, Two Pointers, Sliding Window, Binary Search on Answer Range, and Graph Traversals (BFS/DFS).\n2. Stage 2: Technical Interview Rounds 1 & 2 (DSA Deep Dive) - 45-minute live pair coding rounds with Google senior engineers in Google Docs or Google Meet without IDE autocomplete. Topics: Dynamic Programming (1D, 2D, DP on Trees), Shortest Path (Dijkstra, Bellman-Ford), Trie & Prefix Trees, Disjoint Set Union (DSU). Expect strict scrutiny on time and space complexity, edge cases, and bug-free implementation.\n3. Stage 3: Low Level Design & Code Modularity - Designing clean class hierarchies, applying OOP principles (SOLID), modular design patterns, concurrency basics, and separation of concerns.\n4. Stage 4: Googleyness & Leadership Round - Evaluates intellectual humility, navigation of ambiguity, bias toward action, collaborative teamwork, and ethical decision-making.\nPreparation Tip: Focus heavily on writing clean code on a whiteboard or plain text editor, and practice explaining your thought process out loud before typing any code."
+  },
+  {
+    "id": "roadmap-microsoft-swe",
+    "title": "Microsoft Software Engineer Campus Preparation Roadmap",
+    "category": "company_roadmap",
+    "tags": ["microsoft", "swe", "sde", "roadmap", "trees", "oop", "system design", "codility"],
+    "content": "Microsoft Software Engineer interview format balances algorithmic problem-solving with object-oriented fundamentals and practical software craftsmanship:\n1. Round 1: Online Assessment on Codility - Typically 3 coding tasks in 75-90 minutes focusing on String Manipulation, Linked Lists, Tree Traversals, and Greedy algorithms. Microsoft values clean syntax, correct boundary conditions, and passing all hidden performance test suites.\n2. Round 2 & 3: Technical Screening Rounds - Live coding interviews focusing on Data Structures (Binary Search Trees, Heaps, Matrix Traversal, Recursion/Backtracking) and Core Computer Science fundamentals (OS Memory Management, Thread synchronization, and OOP Design).\n3. Round 4: System Architecture & Design - For full-time roles, candidates are asked to design scalable subsystems (e.g., TinyURL, Notification Service, Cache System with LRU eviction) focusing on throughput, latency, and database choices.\n4. Round 5: AA (As Appropriate / Bar Raiser) Round - Senior Partner or Director level interview assessing cultural alignment, growth mindset, past complex project architecture, and problem-solving grit."
+  },
+  {
+    "id": "roadmap-amazon-sde",
+    "title": "Amazon SDE 1 & Internship Complete Preparation Roadmap",
+    "category": "company_roadmap",
+    "tags": ["amazon", "sde", "roadmap", "leadership principles", "oa", "graph", "heap", "star method"],
+    "content": "Amazon SDE 1 hiring process is renowned for its dual emphasis on algorithmic capability and Amazon's 14 Leadership Principles (LP):\n1. Online Assessment (OA): 3 sections - Section 1: Code Debugging (fixing bugs in 7 given functions in 20 minutes); Section 2: 2 Coding Problems (Medium difficulty: Hash Maps, Sliding Window, Graph DFS/BFS, Heap/Priority Queue in 70 minutes); Section 3: Work Style Simulation & Work Simulation (scenario-based questions assessing customer obsession, ownership, and bias for action).\n2. Technical Rounds 1-3: 60-minute rounds consisting of 20-25 minutes of behavioral questions based on Leadership Principles followed by 30-35 minutes of live coding (Trees, Graphs, Topological Sort, DP, Heap).\n3. Bar Raiser Round: Conducted by an independent Amazon interviewer from a different team to ensure the candidate raises the collective engineering bar. Every answer must be delivered using the STAR method (Situation, Task, Action, Result) with quantified impact metrics.\nKey Rule: In every Amazon round, you must illustrate at least 2 distinct Leadership Principles (Customer Obsession, Ownership, Dive Deep, Deliver Results)."
+  },
+  {
+    "id": "roadmap-flipkart-sde",
+    "title": "Flipkart Software Development Engineer 1 Roadmap",
+    "category": "company_roadmap",
+    "tags": ["flipkart", "sde", "machine coding", "lld", "design patterns", "dsa"],
+    "content": "Flipkart's engineering hiring features a unique and rigorous 'Machine Coding' round:\n1. Round 1: Online Coding Test - HackerEarth platform, 3 problems covering Graph algorithms, Dynamic Programming, and Math/Combinatorics in 90 minutes.\n2. Round 2: Machine Coding Round (2 to 2.5 hours) - Candidates are given a practical problem statement (e.g., In-memory Ride Sharing App, Splitwise Clone, Snake & Ladder, Bowling Alley) and must design, write, and execute fully working, clean, object-oriented code with test cases on their local IDE. Evaluation criteria: OOP principles, design patterns (Strategy, Factory, Observer), clean interfaces, exception handling, and extensibility.\n3. Round 3: Problem Solving & Data Structures (PS/DS) - Rigorous algorithmic round testing Arrays, Trees, Dynamic Programming, and Graphs.\n4. Round 4: Hiring Manager / Culture Fit - Discussion on past internship projects, scalability trade-offs, and willingness to adapt to high-velocity e-commerce environments."
+  },
+  {
+    "id": "roadmap-zomato-swe",
+    "title": "Zomato Backend & Full Stack Engineer Preparation Roadmap",
+    "category": "company_roadmap",
+    "tags": ["zomato", "backend", "fullstack", "high throughput", "api", "database"],
+    "content": "Zomato looks for hands-on, high-ownership product engineers capable of building high-concurrency quick commerce systems:\n1. Round 1: Take-Home Coding Challenge or Online Test - Designing a mini REST API service or solving 2 practical backend/algorithmic challenges.\n2. Round 2: Live Technical Architecture & API Design - Questions around designing high-throughput real-time delivery tracking, geolocation indexing (Geo-hashing, QuadTrees), caching with Redis, message brokering with Kafka/RabbitMQ, and database schema design.\n3. Round 3: Core CS & Problem Solving - Concurrency issues, thread pools, SQL query optimization, database locking mechanisms, and live debugging.\n4. Round 4: Culture & Product Sense - Assessment of high speed execution, self-direction, user empathy, and pragmatic engineering trade-offs."
+  }
+]

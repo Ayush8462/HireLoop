@@ -14,10 +14,12 @@ services:
       - CORE_SERVICE_URL=http://core-service:5002
       - ATS_SERVICE_URL=http://ats-service:5003
       - NOTIFICATION_SERVICE_URL=http://notification-service:5004
+      - CHATBOT_SERVICE_URL=http://chatbot-service:5005
     depends_on:
       - auth-service
       - core-service
       - ats-service
+      - chatbot-service
     networks:
       - hireloop-network
 
@@ -62,6 +64,22 @@ services:
     environment:
       - PORT=5003
       - NODE_ENV=production
+    networks:
+      - hireloop-network
+
+  chatbot-service:
+    build:
+      context: ./services/chatbot-service
+      dockerfile: Dockerfile
+    container_name: hireloop-chatbot-service
+    restart: unless-stopped
+    ports:
+      - "5005:5005"
+    env_file:
+      - ./services/chatbot-service/.env
+    environment:
+      - PORT=5005
+      - ENVIRONMENT=production
     networks:
       - hireloop-network
 

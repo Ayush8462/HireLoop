@@ -1,0 +1,37 @@
+[
+  {
+    "id": "interview-star-method",
+    "title": "The STAR Method for Behavioral & Subjective Interviews",
+    "category": "subjective_interview",
+    "tags": ["star method", "behavioral", "hr", "interview", "situation", "task", "action", "result"],
+    "content": "The STAR method is the industry standard framework for answering behavioral and situational interview questions:\n1. Situation (15-20% of answer): Set the context. Describe the specific project, organization, time period, and challenge you faced. Keep background concise and relevant.\n2. Task (10-15% of answer): Explain what needed to be achieved, your direct responsibility, and the core challenge or constraint (e.g., tight deadline, production outage, ambiguous requirements).\n3. Action (50-60% of answer - Crucial Step): Detail the exact steps YOU took. Use 'I' instead of 'we'. Explain your reasoning, how you navigated obstacles, tools or methodologies used, how you collaborated, and how you validated choices.\n4. Result (15-20% of answer): Share the quantified outcome. Use hard numbers: percentage performance improvement, latency reduction, user growth, time saved, or revenue generated. Mention lessons learned and what you would do differently in hindsight.\nExample: 'When an unexpected spike caused 40% API timeouts (Situation), I was tasked with restoring SLA within 2 hours (Task). I analyzed Redis memory fragmentation, added an in-memory local cache layer, and implemented connection pooling (Action). This brought latency down from 1200ms to 45ms and prevented $50k in downtime loss (Result).'"
+  },
+  {
+    "id": "interview-tell-me-about-yourself",
+    "title": "Crafting the Perfect 'Tell Me About Yourself' Response",
+    "category": "subjective_interview",
+    "tags": ["tell me about yourself", "introduction", "elevator pitch", "hr round", "interview opening"],
+    "content": "Master the 'Present-Past-Future' framework for answering 'Tell me about yourself' in under 90-120 seconds:\n1. Present (30 seconds): State who you are right now, your current degree/role, primary engineering domain, and your headline technical strength (e.g., 'I am a final-year CS undergrad specializing in full-stack web engineering and distributed systems with a strong algorithmic foundation').\n2. Past (45 seconds): Highlight 1-2 pinnacle achievements or flagship projects. Focus on real impact, technical complexity, and problems you solved rather than listing course subjects (e.g., 'Recently I architected HireLoop, a peer-to-peer placement preparation platform that handles resume parsing, mock interviews, and automated feedback for 500+ student users').\n3. Future (30 seconds): Connect your trajectory to this specific company and role. Explain why this opportunity matches your growth roadmap and what unique value you bring (e.g., 'I am excited about this SDE role at your team because I want to work on large-scale distributed databases and high-concurrency microservices').\nCrucial Rule: Avoid reciting your resume line by line. Keep your narrative engaging, enthusiastic, and forward-looking."
+  },
+  {
+    "id": "interview-handling-conflict-weakness",
+    "title": "Handling Conflict, Failure, and Weakness Questions",
+    "category": "subjective_interview",
+    "tags": ["weakness", "conflict resolution", "failure", "behavioral", "hr questions"],
+    "content": "Strategies for the toughest subjective and HR interview prompts:\n1. 'Tell me about a time you faced conflict with a teammate or peer':\n   - Never blame or speak negatively of colleagues.\n   - Frame the conflict as a professional disagreement on design trade-offs or technical decisions, not personal friction.\n   - Demonstrate active listening, objective data-driven experimentation (e.g., running benchmark tests to settle architectural debate), and finding common ground that benefits the end user.\n2. 'Tell me about a time you failed':\n   - Choose a genuine, non-fatal professional or project failure.\n   - Take 100% personal ownership without making excuses.\n   - Emphasize the recovery and the post-mortem: what safeguards, automated tests, or monitoring alerts you implemented to guarantee the failure never reoccurred.\n3. 'What is your greatest weakness?':\n   - Avoid false cliches ('I am a perfectionist' or 'I work too hard').\n   - Pick a genuine technical or professional skill you previously lacked but are actively improving.\n   - Example: 'Earlier, I hesitated to delegate tasks during group projects and took on too much. I realized this created bottlenecks, so over the past year I adopted Agile Kanban boards and clear documentation to trust teammates with distributed ownership.'"
+  },
+  {
+    "id": "interview-amazon-leadership-principles",
+    "title": "Amazon 14 Leadership Principles (LP) Interview Playbook",
+    "category": "subjective_interview",
+    "tags": ["amazon", "leadership principles", "lp", "customer obsession", "bias for action", "dive deep"],
+    "content": "Amazon evaluates every engineering candidate against their Leadership Principles. The top 6 most frequently tested in technical and bar-raiser rounds are:\n1. Customer Obsession: Leaders start with the customer and work backwards. Example answer: Proactively fixing a slow UI flow even when not explicitly filed in Jira because user analytics showed friction.\n2. Ownership: Leaders think long term and don't sacrifice long-term value for short-term results. They never say 'that's not my job'. Example answer: Stepping in to write integration tests or fix CI/CD pipelines when deployment was failing.\n3. Bias for Action: Speed matters in business. Many decisions and actions are reversible and do not need extensive study. Value calculated risk-taking.\n4. Dive Deep: Leaders operate at all levels, stay connected to the details, and audit frequently. No task is beneath them. Example answer: Inspecting low-level TCP socket dumps or SQL execution plans to diagnose a rare intermittent production race condition.\n5. Have Backbone; Disagree and Commit: Respectfully challenge decisions when you disagree, even when doing so is uncomfortable. Once a decision is determined, commit wholly.\n6. Deliver Results: Focus on the key inputs for their business and deliver them with the right quality and in a timely fashion despite setbacks."
+  },
+  {
+    "id": "interview-questions-for-interviewer",
+    "title": "Smart Questions to Ask the Interviewer at the End",
+    "category": "subjective_interview",
+    "tags": ["questions to ask interviewer", "reverse interview", "culture", "engineering culture"],
+    "content": "Never say 'I have no questions' when the interviewer asks if you have questions. Asking thoughtful questions demonstrates curiosity, technical passion, and strategic thinking:\n1. Engineering Culture: 'What does the deployment and continuous integration workflow look like on your team? How often does code go to production?'\n2. Architecture & Challenges: 'What is the single biggest architectural or scalability bottleneck your team is tackling this quarter?'\n3. Day in the Life: 'What does a typical sprint look like for a software engineer joining your pod?'\n4. Growth & Mentorship: 'How does your engineering organization support continuous learning and mentorship for junior and new engineers?'\n5. Interviewer's Personal Perspective: 'What has surprised you most about working at this company compared to your previous experiences?'\nTip: Avoid asking about salary, vacation days, or work hours during initial technical screening rounds."
+  }
+]
