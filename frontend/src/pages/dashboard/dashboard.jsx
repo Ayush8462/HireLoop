@@ -354,6 +354,10 @@ export default function Dashboard() {
     try {
       const u = JSON.parse(localStorage.getItem("user"));
       if (u) {
+        if (u.role === "senior" || u.role === "alumni") {
+          navigate("/senior-dashboard", { replace: true });
+          return;
+        }
         setUser(u);
         setPForm((f) => ({
           ...f,
