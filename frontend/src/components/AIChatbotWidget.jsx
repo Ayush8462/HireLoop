@@ -226,11 +226,16 @@ export default function AIChatbotWidget({ dark = true }) {
       setMessages((prev) => [...prev, botMessage]);
     } catch (err) {
       console.error("Chat error:", err);
+      const detail =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        err.message ||
+        "I encountered a temporary connection issue. Please make sure the service is online or try asking again shortly.";
+
       const errorMessage = {
         id: `err-${Date.now()}`,
         role: "assistant",
-        content:
-          "⚠️ I encountered a temporary connection issue. Please make sure the service is online or try asking again shortly.",
+        content: `⚠️ ${detail}`,
         citations: [],
         suggested_followups: ["Google SDE roadmap", "HireLoop ATS resume scanner"],
       };

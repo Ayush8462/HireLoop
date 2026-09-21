@@ -8,4 +8,13 @@ export const chatbotProxy = createProxyMiddleware({
   pathRewrite: {
     "^/api/chatbot": "",
   },
+  on: {
+    proxyRes: (proxyRes, req, _res) => {
+      const origin = req.headers.origin;
+      if (origin) {
+        proxyRes.headers["access-control-allow-origin"] = origin;
+        proxyRes.headers["access-control-allow-credentials"] = "true";
+      }
+    },
+  },
 });

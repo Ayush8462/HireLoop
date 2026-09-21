@@ -128,7 +128,7 @@ class ResponseGenerator:
                     history=history_text,
                     query=query,
                 )
-                response = self.gemini.generate_content(prompt)
+                response = self.gemini.generate_content(prompt, request_options={"timeout": 6.0})
                 if response and response.text:
                     followups = FOLLOW_UP_SUGGESTIONS.get(intent, FOLLOW_UP_SUGGESTIONS[IntentType.GENERAL_QUERY])
                     return response.text.strip(), citations, followups
