@@ -19,6 +19,7 @@ services:
       - auth-service
       - core-service
       - ats-service
+      - notification-service
       - chatbot-service
     networks:
       - hireloop-network
@@ -48,6 +49,8 @@ services:
       - ./services/core-service/.env
     environment:
       - ATS_SERVICE_URL=http://ats-service:5003
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5004
+      - NOTIFICATION_INTERNAL_SECRET=hireloop_internal_secret_2024
     networks:
       - hireloop-network
 
@@ -67,6 +70,21 @@ services:
     networks:
       - hireloop-network
 
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: hireloop-notification-service
+    restart: unless-stopped
+    ports:
+      - "5004:5004"
+    env_file:
+      - ./services/notification-service/.env
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - NOTIFICATION_INTERNAL_SECRET=hireloop_internal_secret_2024
+    depends_on:
+      - auth-service
   chatbot-service:
     build:
       context: ./services/chatbot-service

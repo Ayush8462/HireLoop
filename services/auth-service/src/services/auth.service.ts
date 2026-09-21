@@ -179,4 +179,17 @@ export class AuthService {
 
 
   }
+
+  /**
+   * Internal method — used by notification-service to resolve authUserId → email+name.
+   */
+  async getUserEmailById(authUserId: string) {
+    const user = await this.userRepository.findById(authUserId);
+    if (!user) return null;
+    return {
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    };
+  }
 }

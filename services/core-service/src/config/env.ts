@@ -16,6 +16,10 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z
     .string()
     .min(32, "JWT_ACCESS_SECRET must be at least 32 characters"),
+
+  // Notification service
+  NOTIFICATION_SERVICE_URL: z.string().url().default("http://notification-service:5004"),
+  NOTIFICATION_INTERNAL_SECRET: z.string().min(1, "NOTIFICATION_INTERNAL_SECRET is required"),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
