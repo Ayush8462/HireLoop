@@ -50,7 +50,19 @@ app.get("/", (_req, res) => {
 app.use("/health", healthRoutes);
 app.use("/test", testRoutes);
 app.use(["/profiles", "/api/profiles"], profileRoutes);
-app.use(["/companies", "/api/companies"], companyRoutes);
+app.use(
+  [
+    "/companies",
+    "/api/companies",
+    "/company",
+    "/api/company",
+    "/roadmaps",
+    "/api/roadmaps",
+    "/roadmap",
+    "/api/roadmap",
+  ],
+  companyRoutes
+);
 app.use(["/referrals", "/api/referrals"], referralRoutes);
 app.use(["/interviews", "/api/interviews"], interviewRoutes);
 

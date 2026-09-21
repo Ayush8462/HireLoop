@@ -733,12 +733,14 @@ export default function Dashboard() {
   // Select company for roadmap
   const handleSelectCompany = async (comp) => {
     setSelectedCompany(comp);
+    setTab("roadmaps");
     setLoadingRoadmap(true);
     try {
       const compId = comp._id || comp.id;
       const r = await getCompanyRoadmaps(compId);
-      if (r.data?.data) {
-        setRoadmapData(r.data.data);
+      const data = r.data?.data || r.data;
+      if (data && (data.stages?.length > 0 || data.title)) {
+        setRoadmapData(data);
       } else {
         setRoadmapData(DEFAULT_ROADMAPS[comp.name] || null);
       }
@@ -1973,24 +1975,49 @@ export default function Dashboard() {
                       <div style={{ marginLeft: 34, marginBottom: 10 }}>
                         <div style={{ fontSize: 11.5, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Key Focus Topics:</div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                          {stage.topics.map((top, ti) => (
-                            <span key={ti} style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 10px", borderRadius: 8, background: T.hover, color: T.text, border: `1px solid ${T.border}` }}>
-                              • {top}
-                            </span>
-                          ))}
+                          {stage.topics.map((top, ti) => {
+                            const topTitle = typeof top === "string" ? top : (top?.title || top?.name || "");
+                            const topDesc = typeof top === "object" ? top?.description : null;
+                            return (
+                              <span
+                                key={ti}
+                                title={topDesc || undefined}
+                                style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 10px", borderRadius: 8, background: T.hover, color: T.text, border: `1px solid ${T.border}` }}
+                              >
+                                • {topTitle}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
-                    {stage.resources && stage.resources.length > 0 && (
-                      <div style={{ marginLeft: 34 }}>
-                        <div style={{ fontSize: 11.5, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Study Materials:</div>
-                        {stage.resources.map((res, ri) => (
-                          <a key={ri} href={res.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#2563eb", display: "inline-flex", alignItems: "center", gap: 4, marginRight: 14, textDecoration: "none" }}>
-                            {res.title} <ExternalLink size={11} />
-                          </a>
-                        ))}
-                      </div>
-                    )}
+                    {(() => {
+                      const stageRes = Array.isArray(stage.resources) ? stage.resources : [];
+                      const topicRes = Array.isArray(stage.topics)
+                        ? stage.topics.flatMap((t) => (Array.isArray(t?.resources) ? t.resources : []))
+                        : [];
+                      const allResources = [...stageRes, ...topicRes].filter((res) => res && res.title && res.url);
+                      if (allResources.length === 0) return null;
+
+                      return (
+                        <div style={{ marginLeft: 34, marginTop: 8 }}>
+                          <div style={{ fontSize: 11.5, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Study Materials:</div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                            {allResources.map((res, ri) => (
+                              <a
+                                key={ri}
+                                href={res.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ fontSize: 12, color: "#2563eb", display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}
+                              >
+                                {res.title} <ExternalLink size={11} />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
