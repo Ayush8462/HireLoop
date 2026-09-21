@@ -10,5 +10,7 @@ router.post("/roadmap/create", verifyToken, rolestatus("admin"), createRoadmap);
 router.put("/roadmap/:id", verifyToken, rolestatus("admin"), updateRoadmap);
 router.delete("/roadmap/:id", verifyToken, rolestatus("admin"), deleteRoadmap);
 router.get("/roadmap/:companyId", verifyToken, getRoadmap);
+router.get("/:companyId/roadmaps", verifyToken, getRoadmap);
+router.get("/:companyId/roadmap", verifyToken, getRoadmap);
 
 export default router;

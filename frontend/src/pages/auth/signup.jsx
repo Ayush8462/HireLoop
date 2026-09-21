@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Eye, EyeOff, Code2, Mail, Lock, User, ArrowRight,
   ArrowLeft, Sparkles, CheckCircle2, GraduationCap, Briefcase,
-  Sun, Moon
+  Sun, Moon, AlertCircle, X
 } from "lucide-react";
 import { signup } from "../../api/auth.js";
 
@@ -23,6 +23,15 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  // Auto-dismiss error after 5s
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(""), 5000);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   // Theme state synced with Dashboard & LocalStorage
   const [dark, setDark] = useState(() => localStorage.getItem("hireloop_theme") === "dark");
@@ -49,6 +58,8 @@ export default function Signup() {
   };
 
   const handleChange = (e) => {
+    if (error) setError("");
+    if (success) setSuccess("");
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -57,9 +68,16 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match. Please ensure both passwords match.");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
       return;
     }
 
@@ -79,15 +97,17 @@ export default function Signup() {
     setLoading(true);
     try {
       await signup(payload);
-      alert("Account created successfully!");
-      navigate("/login");
+      setSuccess("Account created successfully! Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 1000);
     } catch (err) {
       console.error(err);
-      alert(
+      setError(
         err.response?.data?.error?.message ||
         err.response?.data?.message ||
         err.message ||
-        "An error occurred during signup."
+        "An error occurred during signup. Please try again."
       );
     } finally {
       setLoading(false);
@@ -99,6 +119,95 @@ export default function Signup() {
       className="min-h-screen flex flex-col justify-between relative overflow-hidden font-sans transition-colors duration-200"
       style={{ background: T.bg, color: T.text }}
     >
+      {/* Top Right Toast Notification */}
+      {error && (
+        <div
+          role="alert"
+          className="fixed top-5 right-5 z-[9999] max-w-sm sm:max-w-md p-3.5 sm:p-4 rounded-2xl border shadow-2xl flex items-start gap-3 text-xs sm:text-sm animate-in slide-in-from-top-3 fade-in duration-200"
+          style={{
+            background: dark ? "#1a1215" : "#ffffff",
+            borderColor: dark ? "rgba(239, 68, 68, 0.45)" : "#fecaca",
+            boxShadow: dark
+              ? "0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 0 20px rgba(239, 68, 68, 0.25)"
+              : "0 20px 25px -5px rgba(239, 68, 68, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.08)",
+          }}
+        >
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+            style={{
+              background: dark ? "rgba(239, 68, 68, 0.2)" : "#fee2e2",
+              color: "#ef4444",
+            }}
+          >
+            <AlertCircle size={18} />
+          </div>
+          <div className="flex-1 min-w-0 pt-0.5">
+            <div className="font-bold text-[11px] uppercase tracking-wider mb-0.5 text-red-500">
+              Registration Error
+            </div>
+            <div
+              className="leading-snug font-medium break-words"
+              style={{ color: dark ? "#f3f4f6" : "#1f2937" }}
+            >
+              {error}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            className="shrink-0 p-1 rounded-lg opacity-60 hover:opacity-100 transition cursor-pointer"
+            style={{ color: dark ? "#9ca3af" : "#6b7280" }}
+            aria-label="Dismiss error"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {success && (
+        <div
+          role="status"
+          className="fixed top-5 right-5 z-[9999] max-w-sm sm:max-w-md p-3.5 sm:p-4 rounded-2xl border shadow-2xl flex items-start gap-3 text-xs sm:text-sm animate-in slide-in-from-top-3 fade-in duration-200"
+          style={{
+            background: dark ? "#0d1f17" : "#ffffff",
+            borderColor: dark ? "rgba(34, 197, 94, 0.45)" : "#bbf7d0",
+            boxShadow: dark
+              ? "0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 0 20px rgba(34, 197, 94, 0.25)"
+              : "0 20px 25px -5px rgba(34, 197, 94, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.08)",
+          }}
+        >
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+            style={{
+              background: dark ? "rgba(34, 197, 94, 0.2)" : "#dcfce7",
+              color: "#16a34a",
+            }}
+          >
+            <CheckCircle2 size={18} />
+          </div>
+          <div className="flex-1 min-w-0 pt-0.5">
+            <div className="font-bold text-[11px] uppercase tracking-wider mb-0.5 text-green-600 dark:text-green-400">
+              Success
+            </div>
+            <div
+              className="leading-snug font-medium break-words"
+              style={{ color: dark ? "#f3f4f6" : "#1f2937" }}
+            >
+              {success}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccess("")}
+            className="shrink-0 p-1 rounded-lg opacity-60 hover:opacity-100 transition cursor-pointer"
+            style={{ color: dark ? "#9ca3af" : "#6b7280" }}
+            aria-label="Dismiss message"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Background Ambient Glows */}
       <div
         className="absolute -top-32 left-1/2 -translate-x-1/2 w-[650px] h-[350px] rounded-full blur-[120px] pointer-events-none transition-opacity duration-300"
@@ -460,7 +569,7 @@ export default function Signup() {
                   color: T.text,
                 }}
               >
-                Sign In Instead
+                Login
               </Link>
             </div>
           </div>
