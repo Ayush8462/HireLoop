@@ -8,7 +8,7 @@ import {
   LogOut, Building2, LayoutDashboard,
   Target, Menu, Send, ExternalLink,
   ChevronLeft, Sparkles, Info, Pencil,
-  Download, Eye, FileCheck, FileUp, RefreshCw
+  Download, Eye, FileCheck, FileUp, RefreshCw, Video
 } from "lucide-react";
 import { logout } from "../../api/auth.js";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -17,6 +17,7 @@ import { getAllCompanies, getCompanyRoadmaps } from "../../api/company.js";
 import { getAvailableSlots, bookInterview, getStudentHistory, cancelInterview } from "../../api/interview.js";
 import { getMySentReferrals, requestReferral, cancelReferral } from "../../api/referral.js";
 import { uploadAndScoreResume, scoreResumeUrl } from "../../api/ats.js";
+import NotificationBell from "../../components/notifications/NotificationBell.jsx";
 
 /* ─────────────────────────── Default Fallback Companies ────────────────────── */
 const DEFAULT_COMPANIES = [
@@ -289,7 +290,7 @@ const Toast = ({ message, type, onClose }) => {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { logoutUser } = useAuth();
+  const { logoutUser, token } = useAuth();
   const fileRef = useRef(null);
   const profileResumeInputRef = useRef(null);
   const referralResumeInputRef = useRef(null);
@@ -1783,7 +1784,31 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    {b.status === "CONFIRMED" && b.meetLink && (
+                      <a
+                        href={b.meetLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "5px 12px",
+                          borderRadius: 8,
+                          background: "#2563eb",
+                          color: "#ffffff",
+                          textDecoration: "none",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                        }}
+                      >
+                        <Video size={13} />
+                        Join Meet
+                      </a>
+                    )}
                     <span style={{
                       fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 999,
                       background: b.status === "CONFIRMED" ? "#dcfce7" : b.status === "COMPLETED" ? "#dbeafe" : "#fee2e2",
@@ -2655,19 +2680,8 @@ export default function Dashboard() {
               {dark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
 
-            {/* Notifications */}
-            <button
-              style={{
-                width: 36, height: 36, borderRadius: 10, border: `1px solid ${T.border}`,
-                background: T.surface, display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", color: T.muted, position: "relative",
-              }}
-            >
-              <Bell size={16} />
-              {(activeBookingsCount > 0 || pendingReferralsCount > 0) && (
-                <span style={{ position: "absolute", top: 7, right: 7, width: 8, height: 8, background: T.green, borderRadius: "50%", border: `2px solid ${T.surface}` }} />
-              )}
-            </button>
+            {/* Notifications — real-time bell with unread badge */}
+            <NotificationBell token={token} dark={dark} />
 
             {/* Avatar Pill */}
             <div

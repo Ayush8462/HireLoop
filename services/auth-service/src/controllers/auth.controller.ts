@@ -109,3 +109,41 @@ export async function logout(req: Request, res: Response, next: NextFunction) {
         next(error);
     }
 }
+
+/**
+ * GET /internal/user-email/:authUserId
+ * Internal endpoint — only callable by other services using x-internal-secret header.
+ * Returns email, firstName, lastName for a given user ID.
+ */
+export async function getInternalUserEmail(req: Request, res: Response, next: NextFunction) {
+  try {
+    const internalSecret = req.headers["x-internal-secret"];
+    if (!internalSecret || internalSecret !== process.env.NOTIFICATION_INTERNAL_SECRET) {
+      return res.status(403).json({
+        success: false,
+        error: { message: "Forbidden: invalid internal secret" },
+      });
+    }
+
+    const authUserId = String(req.params.authUserId);
+    const user = await authService.getUserEmailById(authUserId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: { message: "User not found" },
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}

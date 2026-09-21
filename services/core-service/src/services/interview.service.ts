@@ -4,6 +4,7 @@ import { profileRepository } from "../respositories/profile.repository.js";
 import { ApiError } from "../utils/api-error.js";
 import { InterviewSlotStatus } from "../models/interview-slot.model.js";
 import { InterviewBookingStatus } from "../models/interview-booking.model.js";
+import { notificationClient } from "./notification-client.service.js";
 
 interface CreateSlotInput {
   startTime: string;
@@ -13,6 +14,13 @@ interface CreateSlotInput {
 interface BookInterviewInput {
   slotId: string;
   notes?: string;
+}
+
+function generateMeetLink(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz";
+  const rand = (len: number) =>
+    Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return `https://meet.google.com/${rand(3)}-${rand(4)}-${rand(3)}`;
 }
 
 export class InterviewService {
@@ -83,14 +91,35 @@ export class InterviewService {
     // Mark slot as booked
     await interviewRepository.updateSlotStatus(slot._id, InterviewSlotStatus.BOOKED);
 
+    const meetLink = generateMeetLink();
+
     // Create booking
-    return interviewRepository.createBooking({
+    const booking = await interviewRepository.createBooking({
       slotId: slot._id,
       studentId: studentProfile._id,
       seniorId: slot.seniorId._id,
       status: InterviewBookingStatus.CONFIRMED,
       notes: data.notes,
+      meetLink,
     });
+
+    // Notify both student and senior + send email with Google Meet link (fire-and-forget)
+    const seniorProfile = await profileRepository.findById(slot.seniorId._id.toString());
+    if (seniorProfile) {
+      notificationClient.fireInterviewConfirmed({
+        bookingId: booking._id.toString(),
+        slotId: slot._id.toString(),
+        startTime: slot.startTime.toISOString(),
+        endTime: slot.endTime.toISOString(),
+        studentAuthUserId: authUserId,
+        seniorAuthUserId: seniorProfile.authUserId,
+        studentName: `${studentProfile.firstName} ${studentProfile.lastName}`,
+        seniorName: `${seniorProfile.firstName} ${seniorProfile.lastName}`,
+        meetLink,
+      });
+    }
+
+    return booking;
   }
 
   async completeInterview(authUserId: string, bookingId: string, notes?: string) {
@@ -160,7 +189,14 @@ export class InterviewService {
       throw new ApiError(404, "Profile not found");
     }
 
-    return interviewRepository.findStudentBookings(studentProfile._id);
+    const bookings = await interviewRepository.findStudentBookings(studentProfile._id);
+    for (const b of bookings) {
+      if (b.status === InterviewBookingStatus.CONFIRMED && !b.meetLink) {
+        b.meetLink = generateMeetLink();
+        await b.save();
+      }
+    }
+    return bookings;
   }
 
   async getMySeniorHistory(authUserId: string) {
@@ -169,7 +205,14 @@ export class InterviewService {
       throw new ApiError(404, "Profile not found");
     }
 
-    return interviewRepository.findSeniorBookings(seniorProfile._id);
+    const bookings = await interviewRepository.findSeniorBookings(seniorProfile._id);
+    for (const b of bookings) {
+      if (b.status === InterviewBookingStatus.CONFIRMED && !b.meetLink) {
+        b.meetLink = generateMeetLink();
+        await b.save();
+      }
+    }
+    return bookings;
   }
 
   async getStats() {

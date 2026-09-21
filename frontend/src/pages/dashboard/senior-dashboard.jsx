@@ -7,7 +7,7 @@ import {
   Sun, User, X, CheckCircle2, AlertCircle,
   LogOut, LayoutDashboard,
   Menu, Send, ExternalLink,
-  Pencil, Briefcase, Download, Eye, Sparkles, Check, FileCheck
+  Pencil, Briefcase, Download, Eye, Sparkles, Check, FileCheck, Video
 } from "lucide-react";
 import { logout } from "../../api/auth.js";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -23,6 +23,7 @@ import {
 } from "../../api/interview.js";
 import { getMyReceivedReferrals, updateReferralStatus } from "../../api/referral.js";
 import { uploadAndScoreResume, scoreResumeUrl } from "../../api/ats.js";
+import NotificationBell from "../../components/notifications/NotificationBell.jsx";
 
 /* ─────────────────────────── Default Companies ─────────────────────────────── */
 const DEFAULT_COMPANIES = [
@@ -35,7 +36,7 @@ const DEFAULT_COMPANIES = [
 
 export default function SeniorDashboard() {
   const navigate = useNavigate();
-  const { logoutUser } = useAuth();
+  const { logoutUser, token } = useAuth();
   const fileRef = useRef(null);
 
   // Theme state synced with LocalStorage
@@ -768,6 +769,50 @@ export default function SeniorDashboard() {
                   </div>
                 )}
 
+                {b.meetLink && (
+                  <div style={{
+                    marginTop: 6,
+                    padding: "6px 10px",
+                    background: dark ? "rgba(37, 99, 235, 0.12)" : "#eff6ff",
+                    border: `1px solid ${dark ? "rgba(59, 130, 246, 0.3)" : "#bfdbfe"}`,
+                    borderRadius: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 6,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <Video size={13} color={dark ? "#60a5fa" : "#2563eb"} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: dark ? "#93c5fd" : "#1e40af" }}>
+                        Meet:
+                      </span>
+                      <span style={{ fontSize: 11, color: dark ? "#bfdbfe" : "#1d4ed8", fontWeight: 500 }}>
+                        {b.meetLink}
+                      </span>
+                    </div>
+                    <a
+                      href={b.meetLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: "3px 8px",
+                        borderRadius: 6,
+                        background: "#2563eb",
+                        color: "#fff",
+                        textDecoration: "none",
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
+                      }}
+                    >
+                      Join
+                      <ExternalLink size={10} />
+                    </a>
+                  </div>
+                )}
+
                 <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
                   <button
                     onClick={() => setCompleteBooking(b)}
@@ -1123,6 +1168,55 @@ export default function SeniorDashboard() {
                     {b.notes && (
                       <div style={{ marginTop: 8, fontSize: 11.5, color: T.muted, background: T.surfaceAlt, padding: 8, borderRadius: 8 }}>
                         <strong>Student goals:</strong> "{b.notes}"
+                      </div>
+                    )}
+
+                    {/* Google Meet Link */}
+                    {isConfirmed && b.meetLink && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          padding: "8px 12px",
+                          background: dark ? "rgba(37, 99, 235, 0.12)" : "#eff6ff",
+                          border: `1px solid ${dark ? "rgba(59, 130, 246, 0.3)" : "#bfdbfe"}`,
+                          borderRadius: 8,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <Video size={14} color={dark ? "#60a5fa" : "#2563eb"} />
+                          <span style={{ fontSize: 11.5, fontWeight: 700, color: dark ? "#93c5fd" : "#1e40af" }}>
+                            Google Meet:
+                          </span>
+                          <span style={{ fontSize: 12, color: dark ? "#bfdbfe" : "#1d4ed8", fontWeight: 500, wordBreak: "break-all" }}>
+                            {b.meetLink}
+                          </span>
+                        </div>
+                        <a
+                          href={b.meetLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "4px 10px",
+                            borderRadius: 6,
+                            background: "#2563eb",
+                            color: "#ffffff",
+                            textDecoration: "none",
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Join Meet
+                          <ExternalLink size={11} />
+                        </a>
                       </div>
                     )}
 
@@ -1930,15 +2024,8 @@ export default function SeniorDashboard() {
               {dark ? <Sun size={15} /> : <Moon size={15} />}
             </button>
 
-            {/* Notification Bell */}
-            <button
-              style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${T.border}`, background: T.surface, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.muted, position: "relative" }}
-            >
-              <Bell size={15} />
-              {(pendingReferrals.length > 0 || confirmedBookings.length > 0) && (
-                <span style={{ position: "absolute", top: 6, right: 6, width: 7, height: 7, background: T.green, borderRadius: "50%", border: `2px solid ${T.surface}` }} />
-              )}
-            </button>
+            {/* Notification Bell — real-time with unread badge */}
+            <NotificationBell token={token} dark={dark} />
 
             {/* Profile Avatar */}
             <div
