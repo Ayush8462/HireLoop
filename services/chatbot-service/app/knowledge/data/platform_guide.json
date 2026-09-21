@@ -1,0 +1,37 @@
+[
+  {
+    "id": "hireloop-overview",
+    "title": "HireLoop Platform Overview & Mission",
+    "category": "platform_guide",
+    "tags": ["hireloop", "platform", "overview", "mock interviews", "referrals", "ats", "students", "seniors"],
+    "content": "HireLoop is an end-to-end career acceleration and placement preparation platform connecting aspiring university students with verified senior peers and industry alumni. Key platform capabilities include:\n1. 1-on-1 Mock Technical & Behavioral Interviews: Students book live preparation sessions with seniors working at top product companies (Google, Microsoft, Amazon, Flipkart, etc.).\n2. Job Referral Marketplace: Directly request internal referrals from verified seniors at target dream companies with personalized notes and verified resumes.\n3. Intelligent ATS Resume Scanner: Real-time parsing of PDF resumes to calculate match score, highlight missing keywords, and suggest formatting optimizations before real applications.\n4. Senior Mentorship Ecosystem: Seniors set their availability slots, provide structured scorecard feedback, and empower the next generation of engineers while building their mentorship track record."
+  },
+  {
+    "id": "hireloop-ats-scanner",
+    "title": "HireLoop ATS Resume Scanner Guide",
+    "category": "platform_guide",
+    "tags": ["ats", "resume scanner", "score", "keywords", "pdf viewer", "resume audit"],
+    "content": "How the HireLoop ATS Resume Scanner works:\n1. Dedicated Audit Workspace: Navigate to the ATS Resume Scan page from the navigation bar. You can upload any PDF resume to analyze it against industry hiring standards or compare it against target job descriptions.\n2. In-Memory Analysis & Privacy: When you upload a resume on the ATS scan page to check your score, it is parsed and rendered in the viewer for your immediate inspection without being permanently stored in your profile or uploaded to cloud storage.\n3. Scoring Breakdown: The ATS algorithm scores across 4 key dimensions: (a) Structural Formatting (single-column, standard headings, font readability); (b) Keyword Relevance (role-specific tech stack, libraries, cloud tools); (c) Action-Oriented Impact (presence of quantifiable metrics, STAR accomplishments); (d) Section Completeness (Education, Experience, Projects, Skills, Links).\n4. Updating Official Resume: Your official profile resume is managed exclusively in the 'My Profile' section. Uploading here updates your verified resume across the mock interview and referral request modules."
+  },
+  {
+    "id": "hireloop-mock-interviews",
+    "title": "How to Book Mock Interviews on HireLoop",
+    "category": "platform_guide",
+    "tags": ["mock interview", "booking", "seniors", "slots", "feedback", "student dashboard"],
+    "content": "Step-by-step guide to booking mock interview sessions:\n1. Browse Verified Mentors: In the Student Dashboard, explore the list of verified seniors categorized by company, role (Frontend, Backend, Full Stack, SDE), and expertise (DSA, System Design, Behavioral).\n2. View Availability & Profile: Click on a mentor's profile to view their company, current role, past interview experiences, bio, and available calendar slots.\n3. Select Slot & Submit Request: Pick a mutually convenient time slot, attach your current resume, and specify your focus areas (e.g., 'Dynamic Programming practice' or 'Amazon LP mock interview').\n4. Confirmation & Room Link: Once the senior accepts the request, a secure video room link is generated for your scheduled session.\n5. Post-Interview Feedback: Following the mock round, the senior submits a detailed rubric scorecard covering code quality, communication, problem-solving, and edge-case testing with targeted advice for improvement."
+  },
+  {
+    "id": "hireloop-referrals",
+    "title": "Requesting Referrals from Seniors on HireLoop",
+    "category": "platform_guide",
+    "tags": ["referrals", "job referral", "senior referrals", "internal referral", "request referral"],
+    "content": "How to maximize referral success on HireLoop:\n1. Find Seniors at Target Company: Filter mentors and seniors by the company you are applying to (e.g., Google, Microsoft, Amazon).\n2. Check Job Openings: Search the company's official career portal first to find an active Job Requisition ID or URL that aligns with your qualifications.\n3. Submit Referral Request: Open the referral request modal, select the senior, paste the target Job ID / Title, and provide a concise, polite pitch explaining why you are a strong fit for the role.\n4. Senior Review: The senior receives your referral request along with your verified HireLoop profile, verified resume, and past mock interview ratings. If satisfied with your preparation, they submit the referral directly through their internal corporate HR referral portal."
+  },
+  {
+    "id": "hireloop-profile-management",
+    "title": "Managing Profile and Resume on HireLoop",
+    "category": "platform_guide",
+    "tags": ["profile", "resume upload", "my profile", "edit profile", "student profile"],
+    "content": "Best practices for maintaining your HireLoop profile:\n1. Dedicated Profile Hub: Access 'My Profile' from the top-right navigation menu. This is the centralized place to update personal details, bio, tech skills, social links (GitHub, LinkedIn, LeetCode, Codeforces), and your primary resume.\n2. Resume Upload & Viewing: Upload your verified PDF resume in the 'My Profile' section. You can preview it with the 'View Resume' button or download it anytime using the dedicated 'Download Resume' action.\n3. Profile Visibility: A complete profile with verified links and skills significantly increases your chances of seniors accepting mock interview bookings and referral requests."
+  }
+]

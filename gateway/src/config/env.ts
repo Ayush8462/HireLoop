@@ -24,6 +24,7 @@ export const env = {
     auth: process.env.AUTH_SERVICE_URL as string,
     core: process.env.CORE_SERVICE_URL as string,
     ats: process.env.ATS_SERVICE_URL as string,
-    notification: process.env.NOTIFICATION_SERVICE_URL as string
+    notification: process.env.NOTIFICATION_SERVICE_URL as string,
+    chatbot: process.env.CHATBOT_SERVICE_URL as string
   }
 };
