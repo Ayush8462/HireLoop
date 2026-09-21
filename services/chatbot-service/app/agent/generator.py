@@ -86,9 +86,10 @@ class ResponseGenerator:
     ) -> Tuple[str, List[SourceCitation], List[str]]:
         """Synthesizes an answer and extracts citations and suggested follow-ups."""
         
-        # Handle simple greetings
+        # Handle simple greetings and conversational queries
         if intent == IntentType.CHITCHAT_OR_GREETING:
-            return GREETING_RESPONSE, [], FOLLOW_UP_SUGGESTIONS[IntentType.CHITCHAT_OR_GREETING]
+            answer, followups = self._handle_chitchat(query)
+            return answer, [], followups
 
         # Build citations
         citations: List[SourceCitation] = []
@@ -225,6 +226,76 @@ class ResponseGenerator:
         )
 
         return "\n\n".join(output_lines)
+
+    def _handle_chitchat(self, query: str) -> Tuple[str, List[str]]:
+        """Provides tailored, conversational answers for basic greetings and small-talk."""
+        q = query.strip().lower()
+
+        # 1. How are you / status
+        if re.search(r"\b(how\s+are\s+(you|u)|how\s+r\s+u|how('s|\s+is)\s+it\s+going|what('s|\s+is)\s+up|whats\s+up|wassup)\b", q):
+            msg = (
+                "I'm doing great, thank you for asking! 😊 Ready to help you prepare for your technical interviews "
+                "or campus placements. What would you like to practice today?"
+            )
+            followups = [
+                "Google SDE interview roadmap",
+                "Explain Operating System deadlock",
+                "How do I use the STAR method?",
+            ]
+            return msg, followups
+
+        # 2. Identity / capabilities
+        if re.search(r"\b(who\s+are\s+you|who\s+r\s+u|what\s+is\s+your\s+name|what\s+can\s+you\s+do|what\s+do\s+you\s+do|help\s*me|how\s+can\s+you\s+help|what\s+are\s+you)\b", q):
+            msg = (
+                "I am the **HireLoop AI Career Mentor**! 🚀\n\n"
+                "I can help you with:\n"
+                "• **Company Roadmaps**: Detailed hiring rounds for Google, Amazon, Microsoft, Flipkart, etc.\n"
+                "• **Core CS Topics**: OS, DBMS, Networks, and OOP fundamentals.\n"
+                "• **Behavioral Prep**: STAR method framework, HR rounds, and Leadership Principles.\n"
+                "• **HireLoop Platform**: Booking mock interviews, requesting referrals, and ATS resume audits."
+            )
+            followups = [
+                "Google SDE interview roadmap",
+                "Explain DBMS ACID properties",
+                "How to book a mock interview on HireLoop",
+            ]
+            return msg, followups
+
+        # 3. Gratitude / acknowledgment
+        if re.search(r"\b(thanks|thank\s*(you|u)|thx|tysm|thank\s*you\s*so\s*much|ok|okay|cool|great|awesome|nice|got\s+it)\b", q):
+            msg = (
+                "You're very welcome! 😊 Always here to assist your tech career journey. "
+                "Feel free to ask anytime you need more interview tips, roadmaps, or concept breakdowns!"
+            )
+            followups = [
+                "Amazon SDE 1 preparation roadmap",
+                "How do I use the STAR method?",
+                "How does the HireLoop ATS Scanner work?",
+            ]
+            return msg, followups
+
+        # 4. Closings / Goodbyes
+        if re.search(r"\b(bye|goodbye|see\s+you|cya|talk\s+to\s+you\s+later|gn|good\s*night)\b", q):
+            msg = "Goodbye! 👋 Wishing you great success in your career and interviews. You've got this! Feel free to return anytime."
+            followups = [
+                "Google SDE roadmap",
+                "ATS resume scanner guide",
+            ]
+            return msg, followups
+
+        # 5. Default friendly greeting (hi, hii, hello, hey, good morning, etc.)
+        msg = (
+            "Hello! 👋 I'm your **HireLoop AI Career Mentor**.\n\n"
+            "I'm here to help you ace your interviews and placements. Ask me about **company roadmaps**, "
+            "**Core CS fundamentals** (OS, DBMS, CN), **behavioral prep (STAR)**, or **HireLoop platform features**!"
+        )
+        followups = [
+            "Google SDE interview roadmap",
+            "Explain Process vs Thread",
+            "How do I use the STAR method?",
+            "How does the HireLoop ATS Resume Scanner work?",
+        ]
+        return msg, followups
 
 
 default_generator = ResponseGenerator()

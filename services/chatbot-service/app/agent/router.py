@@ -7,9 +7,18 @@ class IntentRouter:
     """Classifies user queries into discrete intent categories to steer retrieval and synthesis."""
 
     GREETING_PATTERNS = [
-        r"^(hi|hello|hey|greetings|hola|namaste|good\s*(morning|afternoon|evening|day))(\b|[\s\.\!\,])",
-        r"^(who\s+are\s+you|what\s+is\s+your\s+name|what\s+can\s+you\s+do|help\s*me|how\s+can\s+you\s+help)",
-        r"^(thanks|thank\s+you|thx|bye|goodbye|see\s+you)",
+        # Variations of hi, hii, hiii, hello, helloo, hey, heyy, hlo, yo, sup
+        r"^(h+i+|h+e+y+|h+e+l+o+|h+e+l+l+o+|hlo|yo|sup|hola|namaste|vanakkam)(\b|[\s\.\!\,\?]|$)",
+        # How are you variations
+        r"^(how\s+are\s+(you|u)|how\s+r\s+u|how('s|\s+is)\s+it\s+going|what('s|\s+is)\s+up|whats\s+up|wassup)(\b|[\s\.\!\,\?]|$)",
+        # Identity and capabilities
+        r"^(who\s+are\s+you|who\s+r\s+u|what\s+is\s+your\s+name|what\s+can\s+you\s+do|what\s+do\s+you\s+do|help\s*me|how\s+can\s+you\s+help|what\s+are\s+you)(\b|[\s\.\!\,\?]|$)",
+        # Gratitude, appreciation, acknowledgments
+        r"^(thanks|thank\s*(you|u)|thx|tysm|thank\s*you\s*so\s*much|ok|okay|k|cool|great|awesome|nice|got\s+it)(\b|[\s\.\!\,\?]|$)",
+        # Closings and farewells
+        r"^(bye|goodbye|see\s+you|cya|talk\s+to\s+you\s+later|gn|good\s*night)(\b|[\s\.\!\,\?]|$)",
+        # Time-of-day greetings
+        r"^(good\s*(morning|afternoon|evening|day)|gm|ge)(\b|[\s\.\!\,\?]|$)",
     ]
 
     INTENT_KEYWORD_RULES: Dict[IntentType, List[str]] = {
