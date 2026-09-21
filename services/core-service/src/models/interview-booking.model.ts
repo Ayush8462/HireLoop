@@ -22,6 +22,7 @@ export interface IInterviewBooking {
   status: InterviewBookingStatus;
 
   notes?: string;
+  meetLink?: string;
 
   createdAt: Date;
   updatedAt: Date;
@@ -67,6 +68,12 @@ const interviewBookingSchema =
         type: String,
         trim: true,
         maxlength: 2000,
+      },
+
+      meetLink: {
+        type: String,
+        trim: true,
+        maxlength: 500,
       },
     },
     {

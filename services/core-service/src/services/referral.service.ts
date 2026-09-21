@@ -4,6 +4,8 @@ import { profileRepository } from "../respositories/profile.repository.js";
 import { companyRepository } from "../respositories/company.repository.js";
 import { ApiError } from "../utils/api-error.js";
 import { ReferralStatus } from "../models/referral.model.js";
+import { notificationClient } from "./notification-client.service.js";
+import { NotificationType } from "./notification-client.service.js";
 
 interface RequestReferralInput {
   seniorId: string;
@@ -63,7 +65,7 @@ export class ReferralService {
       throw new ApiError(409, "You have already submitted a pending referral request for this position");
     }
 
-    return referralRepository.create({
+    const referral = await referralRepository.create({
       studentId: studentProfile._id,
       seniorId: seniorObjectId,
       companyId: companyObjectId,
@@ -74,6 +76,20 @@ export class ReferralService {
       resumeFileName: data.resumeFileName || studentProfile.resumeFileName,
       status: ReferralStatus.PENDING,
     });
+
+    // Notify senior about the new referral request (fire-and-forget)
+    notificationClient.fireReferralEvent({
+      type: NotificationType.REFERRAL_REQUEST,
+      referralId: referral._id.toString(),
+      jobTitle: data.jobTitle,
+      companyName: company.name,
+      studentAuthUserId: authUserId,
+      seniorAuthUserId: seniorProfile.authUserId,
+      studentName: `${studentProfile.firstName} ${studentProfile.lastName}`,
+      seniorName: `${seniorProfile.firstName} ${seniorProfile.lastName}`,
+    });
+
+    return referral;
   }
 
   async updateStatus(
@@ -110,7 +126,41 @@ export class ReferralService {
       throw new ApiError(403, "Only the requester can cancel this referral request");
     }
 
-    return referralRepository.updateStatus(referralId, status);
+    const updatedReferral = await referralRepository.updateStatus(referralId, status);
+
+    // Determine notification type and fetch profiles for names
+    let notifType: string | null = null;
+    if (status === ReferralStatus.ACCEPTED) notifType = NotificationType.REFERRAL_ACCEPTED;
+    else if (status === ReferralStatus.REJECTED) notifType = NotificationType.REFERRAL_REJECTED;
+    else if (status === ReferralStatus.SUBMITTED) notifType = NotificationType.REFERRAL_SUBMITTED;
+    else if (status === ReferralStatus.CANCELLED) notifType = NotificationType.REFERRAL_CANCELLED;
+
+    if (notifType) {
+      // We need both profiles to get names and authUserIds
+      const [studentProfile, seniorProfile] = await Promise.all([
+        profileRepository.findById(referral.studentId._id.toString()),
+        profileRepository.findById(referral.seniorId._id.toString()),
+      ]);
+
+      if (studentProfile && seniorProfile) {
+        // For CANCELLED: notify senior. For everything else: notify student.
+        const studentAuthUserId = studentProfile.authUserId;
+        const seniorAuthUserId = seniorProfile.authUserId;
+
+        notificationClient.fireReferralEvent({
+          type: notifType,
+          referralId,
+          jobTitle: referral.jobTitle,
+          companyName: "",  // company name not stored on referral, use jobTitle as context
+          studentAuthUserId,
+          seniorAuthUserId,
+          studentName: `${studentProfile.firstName} ${studentProfile.lastName}`,
+          seniorName: `${seniorProfile.firstName} ${seniorProfile.lastName}`,
+        });
+      }
+    }
+
+    return updatedReferral;
   }
 
   async getMySentReferrals(authUserId: string, status?: ReferralStatus) {
