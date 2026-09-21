@@ -7,6 +7,9 @@ export const coreProxy = createProxyMiddleware({
   pathFilter: [
     "/api/profiles",
     "/api/companies",
+    "/api/company",
+    "/api/roadmaps",
+    "/api/roadmap",
     "/api/referrals",
     "/api/interviews",
   ],

@@ -23,18 +23,18 @@ router.post("/", authenticate, validate(createCompanySchema), createCompany);
 router.get("/:id", getCompanyById);
 
 router.post(
-  "/:companyId/roadmaps",
+  ["/:companyId/roadmaps", "/:companyId/roadmap", "/roadmap/:companyId"],
   authenticate,
   validate(createRoadmapSchema),
   createRoadmap
 );
-router.get("/:companyId/roadmaps", getRoadmapByCompanyId);
+router.get(["/:companyId/roadmaps", "/:companyId/roadmap", "/roadmap/:companyId"], getRoadmapByCompanyId);
 router.patch(
-  "/roadmaps/:id",
+  ["/roadmaps/:id", "/roadmap/:id"],
   authenticate,
   validate(updateRoadmapSchema),
   updateRoadmap
 );
-router.delete("/roadmaps/:id", authenticate, deleteRoadmap);
+router.delete(["/roadmaps/:id", "/roadmap/:id"], authenticate, deleteRoadmap);
 
 export default router;

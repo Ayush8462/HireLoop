@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -13,6 +13,66 @@ export default function LandingPage() {
 
   // Theme state synced with Dashboard & LocalStorage
   const [dark, setDark] = useState(() => localStorage.getItem("hireloop_theme") === "dark");
+
+  // Scrollspy & Sticky Header States
+  const [activeSection, setActiveSection] = useState("");
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const sectionIds = ["companies", "features", "how"];
+
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      setIsScrolled(scrollY > 20);
+
+      // If near the bottom of page, highlight the last section
+      const windowHeight = window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
+      if (scrollY + windowHeight >= docHeight - 90) {
+        setActiveSection("how");
+        return;
+      }
+
+      // Detection trigger threshold (180px below top)
+      const triggerLine = 180;
+      let current = "";
+
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= triggerLine && rect.bottom >= triggerLine) {
+            current = id;
+            break;
+          }
+        }
+      }
+
+      setActiveSection(current);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToSection = (e, id) => {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (el) {
+      const yOffset = -72;
+      const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  };
+
+  // Navbar items ordered from left to right: Target Companies -> Features -> How It Works
+  const navItems = [
+    { id: "companies", label: "Target Companies", href: "#companies" },
+    { id: "features", label: "Features", href: "#features" },
+    { id: "how", label: "How It Works", href: "#how" },
+  ];
 
   const toggleTheme = () => {
     setDark((prev) => {
@@ -37,7 +97,7 @@ export default function LandingPage() {
 
   return (
     <div
-      className="min-h-screen font-sans selection:bg-emerald-500/30 selection:text-emerald-500 relative overflow-x-hidden transition-colors duration-200"
+      className="min-h-screen font-sans selection:bg-emerald-500/30 selection:text-emerald-500 relative overflow-x-clip transition-colors duration-200"
       style={{ background: T.bg, color: T.text }}
     >
       {/* Background Ambient Glows */}
@@ -54,47 +114,111 @@ export default function LandingPage() {
         style={{ background: dark ? "rgba(4, 120, 87, 0.1)" : "rgba(34, 197, 94, 0.12)" }}
       />
 
-      {/* --- HEADER --- */}
+      {/* --- STICKY & TRANSLUCENT HEADER --- */}
       <header
-        className="backdrop-blur-md border-b sticky top-0 z-50 transition-colors duration-200"
+        className="sticky top-0 z-50 transition-all duration-300 backdrop-blur-lg border-b"
         style={{
-          background: dark ? "rgba(11, 15, 25, 0.85)" : "rgba(240, 247, 243, 0.85)",
-          borderColor: T.border,
+          background: dark
+            ? isScrolled
+              ? "rgba(11, 15, 25, 0.72)"
+              : "rgba(11, 15, 25, 0.50)"
+            : isScrolled
+              ? "rgba(240, 247, 243, 0.78)"
+              : "rgba(240, 247, 243, 0.55)",
+          borderColor: isScrolled
+            ? (dark ? "rgba(31, 41, 55, 0.8)" : "rgba(229, 231, 235, 0.9)")
+            : (dark ? "rgba(31, 41, 55, 0.4)" : "rgba(229, 231, 235, 0.5)"),
+          boxShadow: isScrolled
+            ? dark
+              ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)"
+              : "0 4px 20px -2px rgba(0, 0, 0, 0.05)"
+            : "none",
         }}
       >
-        <div className="max-w-7xl mx-auto px-6 py-3.5 flex justify-between items-center">
-          {/* Logo */}
-          <div
-            onClick={() => navigate("/")}
-            className="flex items-center gap-3 cursor-pointer group"
-          >
+        <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col md:flex-row justify-between md:items-center gap-2 md:gap-0">
+          <div className="flex justify-between items-center w-full md:w-auto">
+            {/* Logo */}
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform"
-              style={{ background: T.green, boxShadow: `0 10px 15px -3px ${T.green}40` }}
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className="flex items-center gap-3 cursor-pointer group"
             >
-              <Code2 size={22} className="text-white" />
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform"
+                style={{ background: T.green, boxShadow: `0 10px 15px -3px ${T.green}40` }}
+              >
+                <Code2 size={22} className="text-white" />
+              </div>
+              <div>
+                <div className="font-extrabold text-lg leading-tight tracking-tight" style={{ color: T.text }}>
+                  HireLoop
+                </div>
+                <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: T.green }}>
+                  Career Acceleration
+                </div>
+              </div>
             </div>
-            <div>
-              <div className="font-extrabold text-lg leading-tight tracking-tight" style={{ color: T.text }}>
-                HireLoop
-              </div>
-              <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: T.green }}>
-                Career Acceleration
-              </div>
+
+            {/* Mobile Quick Actions Right */}
+            <div className="flex items-center gap-2 md:hidden">
+              <button
+                onClick={toggleTheme}
+                title="Toggle theme"
+                className="w-8 h-8 rounded-lg border flex items-center justify-center cursor-pointer"
+                style={{ background: T.surface, borderColor: T.border, color: dark ? "#fbbf24" : T.muted }}
+              >
+                {dark ? <Sun size={15} /> : <Moon size={15} />}
+              </button>
+              <button
+                className="text-xs px-2.5 py-1.5 font-medium cursor-pointer"
+                style={{ color: T.text }}
+                onClick={() => navigate("/login")}
+              >
+                Sign In
+              </button>
+              <button
+                className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold cursor-pointer shadow-sm"
+                style={{ background: T.green }}
+                onClick={() => navigate("/signup")}
+              >
+                Get Started
+              </button>
             </div>
           </div>
 
-          {/* Nav Links */}
-          <nav className="hidden md:flex gap-7 items-center text-sm font-medium">
-            <a href="#features" className="hover:text-emerald-600 transition-colors" style={{ color: T.muted }}>
-              Features
-            </a>
-            <a href="#how" className="hover:text-emerald-600 transition-colors" style={{ color: T.muted }}>
-              How It Works
-            </a>
-            <a href="#companies" className="hover:text-emerald-600 transition-colors" style={{ color: T.muted }}>
-              Target Companies
-            </a>
+          {/* Desktop Nav Links with Scrollspy Active Highlighting */}
+          <nav className="hidden md:flex gap-1.5 items-center text-sm font-medium">
+            {navItems.map((item) => {
+              const isActive = activeSection === item.id;
+              return (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  onClick={(e) => scrollToSection(e, item.id)}
+                  className="relative px-3.5 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer flex items-center gap-1.5"
+                  style={{
+                    color: isActive ? (dark ? "#4ade80" : "#15803d") : T.muted,
+                    background: isActive
+                      ? (dark ? "rgba(34, 197, 94, 0.16)" : "rgba(34, 197, 94, 0.12)")
+                      : "transparent",
+                    border: isActive
+                      ? `1px solid ${dark ? "rgba(34, 197, 94, 0.35)" : "rgba(34, 197, 94, 0.25)"}`
+                      : "1px solid transparent",
+                  }}
+                >
+                  {isActive && (
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ background: dark ? "#4ade80" : "#16a34a" }}
+                    />
+                  )}
+                  <span>{item.label}</span>
+                </a>
+              );
+            })}
+
+            <div className="h-4 w-[1px] mx-2" style={{ background: T.border }} />
 
             {/* Theme Toggle Button */}
             <button
@@ -111,7 +235,7 @@ export default function LandingPage() {
             </button>
 
             <button
-              className="transition-colors cursor-pointer px-3 py-1.5"
+              className="transition-colors cursor-pointer px-3 py-1.5 font-medium"
               style={{ color: T.text }}
               onClick={() => navigate("/login")}
             >
@@ -119,7 +243,7 @@ export default function LandingPage() {
             </button>
 
             <button
-              className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold shadow-lg transition-all cursor-pointer flex items-center gap-1.5 hover:opacity-95"
+              className="px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-lg transition-all cursor-pointer flex items-center gap-1.5 hover:opacity-95"
               style={{ background: T.green, boxShadow: `0 10px 15px -3px ${T.green}40` }}
               onClick={() => navigate("/signup")}
             >
@@ -128,30 +252,35 @@ export default function LandingPage() {
             </button>
           </nav>
 
-          {/* Mobile Quick Actions */}
-          <div className="flex items-center gap-2 md:hidden">
-            <button
-              onClick={toggleTheme}
-              title="Toggle theme"
-              className="w-8 h-8 rounded-lg border flex items-center justify-center"
-              style={{ background: T.surface, borderColor: T.border, color: dark ? "#fbbf24" : T.muted }}
-            >
-              {dark ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-            <button
-              className="text-xs px-2.5 py-1.5"
-              style={{ color: T.text }}
-              onClick={() => navigate("/login")}
-            >
-              Sign In
-            </button>
-            <button
-              className="px-3.5 py-1.5 rounded-lg text-white text-xs font-semibold"
-              style={{ background: T.green }}
-              onClick={() => navigate("/signup")}
-            >
-              Get Started
-            </button>
+          {/* Mobile Active Section Navigation Pills */}
+          <div className="flex md:hidden items-center gap-1 overflow-x-auto pt-1 pb-0.5 border-t border-dashed scrollbar-none" style={{ borderColor: dark ? "rgba(31,41,55,0.4)" : "rgba(229,231,235,0.6)" }}>
+            {navItems.map((item) => {
+              const isActive = activeSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={(e) => scrollToSection(e, item.id)}
+                  className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap transition-all flex items-center gap-1 cursor-pointer"
+                  style={{
+                    color: isActive ? (dark ? "#4ade80" : "#15803d") : T.muted,
+                    background: isActive
+                      ? (dark ? "rgba(34, 197, 94, 0.18)" : "rgba(34, 197, 94, 0.12)")
+                      : "transparent",
+                    border: isActive
+                      ? `1px solid ${dark ? "rgba(34, 197, 94, 0.35)" : "rgba(34, 197, 94, 0.25)"}`
+                      : "1px solid transparent",
+                  }}
+                >
+                  {isActive && (
+                    <span
+                      className="w-1 h-1 rounded-full"
+                      style={{ background: dark ? "#4ade80" : "#16a34a" }}
+                    />
+                  )}
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </header>
