@@ -284,6 +284,10 @@ export class ProfileService {
       profile: updatedProfile,
     };
   }
+
+  async getSeniors(companyId?: string) {
+    return profileRepository.findSeniors(companyId);
+  }
 }
 
 export const profileService = new ProfileService();

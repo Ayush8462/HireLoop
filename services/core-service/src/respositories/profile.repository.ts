@@ -46,6 +46,23 @@ export class ProfileRepository{
       .lean();
     return students.map((s) => s.authUserId).filter(Boolean);
   }
+
+  async findSeniors(companyId?: string): Promise<ProfileDocument[]> {
+    const query: Record<string, unknown> = {
+      role: ProfileRole.SENIOR,
+    };
+    if (companyId) {
+      if (Types.ObjectId.isValid(companyId)) {
+        query.companyId = new Types.ObjectId(companyId);
+      } else {
+        query.companyId = companyId;
+      }
+    }
+    return Profile.find(query)
+      .populate("companyId")
+      .sort({ firstName: 1, lastName: 1 })
+      .exec();
+  }
 }
 
 export const profileRepository = new ProfileRepository();
