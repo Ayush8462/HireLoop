@@ -700,9 +700,3 @@ npm run dev
 - [ ] **AI-Powered Pitch Generator**: Automated referral message optimization tailored to senior job descriptions.
 - [ ] **Alumni Verification System**: Automated corporate domain email verification (`@company.com`) for senior mentors.
 - [ ] **Placement Analytics Dashboard**: College placement cell view with aggregate placement statistics, offer ratios, and batch readiness metrics.
-
----
-
-## 📄 License
-
-This project is licensed under the ISC License.
