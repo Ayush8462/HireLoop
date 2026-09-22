@@ -41,6 +41,41 @@ export class NotificationService {
   }
 
   /**
+   * Create multiple notifications in the DB and immediately push them via Socket.io
+   * to each recipient if currently connected.
+   */
+  async createManyAndEmit(
+    recipientAuthUserIds: string[],
+    payload: Omit<CreateNotificationPayload, "recipientAuthUserId">,
+  ): Promise<void> {
+    if (!recipientAuthUserIds.length) return;
+
+    const docs = recipientAuthUserIds.map((recipientAuthUserId) => ({
+      recipientAuthUserId,
+      senderAuthUserId: payload.senderAuthUserId,
+      type: payload.type,
+      title: payload.title,
+      message: payload.message,
+      data: payload.data ?? {},
+      isRead: false,
+    }));
+
+    const inserted = await Notification.insertMany(docs);
+
+    for (const notification of inserted) {
+      emitToUser(notification.recipientAuthUserId, "notification:new", {
+        id: notification._id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        data: notification.data,
+        isRead: notification.isRead,
+        createdAt: notification.createdAt,
+      });
+    }
+  }
+
+  /**
    * Get all notifications for a user, newest first.
    */
   async getMyNotifications(

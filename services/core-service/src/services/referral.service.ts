@@ -135,27 +135,24 @@ export class ReferralService {
     else if (status === ReferralStatus.SUBMITTED) notifType = NotificationType.REFERRAL_SUBMITTED;
     else if (status === ReferralStatus.CANCELLED) notifType = NotificationType.REFERRAL_CANCELLED;
 
-    if (notifType) {
-      // We need both profiles to get names and authUserIds
-      const [studentProfile, seniorProfile] = await Promise.all([
-        profileRepository.findById(referral.studentId._id.toString()),
-        profileRepository.findById(referral.seniorId._id.toString()),
-      ]);
+    if (notifType && updatedReferral) {
+      const student = updatedReferral.studentId as any;
+      const senior = updatedReferral.seniorId as any;
+      const company = updatedReferral.companyId as any;
 
-      if (studentProfile && seniorProfile) {
-        // For CANCELLED: notify senior. For everything else: notify student.
-        const studentAuthUserId = studentProfile.authUserId;
-        const seniorAuthUserId = seniorProfile.authUserId;
+      const studentAuthUserId = student?.authUserId;
+      const seniorAuthUserId = senior?.authUserId;
 
+      if (studentAuthUserId && seniorAuthUserId) {
         notificationClient.fireReferralEvent({
           type: notifType,
-          referralId,
-          jobTitle: referral.jobTitle,
-          companyName: "",  // company name not stored on referral, use jobTitle as context
+          referralId: updatedReferral._id.toString(),
+          jobTitle: updatedReferral.jobTitle,
+          companyName: company?.name || "Target Company",
           studentAuthUserId,
           seniorAuthUserId,
-          studentName: `${studentProfile.firstName} ${studentProfile.lastName}`,
-          seniorName: `${seniorProfile.firstName} ${seniorProfile.lastName}`,
+          studentName: `${student.firstName || ""} ${student.lastName || ""}`.trim(),
+          seniorName: `${senior.firstName || ""} ${senior.lastName || ""}`.trim(),
         });
       }
     }

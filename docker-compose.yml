@@ -85,6 +85,8 @@ services:
       - NOTIFICATION_INTERNAL_SECRET=hireloop_internal_secret_2024
     depends_on:
       - auth-service
+    networks:
+      - hireloop-network
   chatbot-service:
     build:
       context: ./services/chatbot-service

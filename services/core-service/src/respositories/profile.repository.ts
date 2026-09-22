@@ -4,6 +4,7 @@ import {
   IProfile,
   Profile,
   ProfileDocument,
+  ProfileRole,
 } from "../models/profile.model.js";
 
 export class ProfileRepository{
@@ -37,6 +38,13 @@ export class ProfileRepository{
         runValidators: true,
       },
     ).exec();
+  }
+
+  async findAllStudentAuthUserIds(): Promise<string[]> {
+    const students = await Profile.find({ role: ProfileRole.STUDENT })
+      .select("authUserId")
+      .lean();
+    return students.map((s) => s.authUserId).filter(Boolean);
   }
 }
 
