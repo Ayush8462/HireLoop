@@ -211,3 +211,54 @@ export const handleInterviewConfirmed: RequestHandler = async (req, res, next) =
     next(error);
   }
 };
+
+// ─── Slot Created Event ───────────────────────────────────────────────────────
+
+interface SlotCreatedPayload {
+  slotId: string;
+  seniorAuthUserId: string;
+  seniorName: string;
+  startTime: string; // ISO
+  endTime: string;   // ISO
+  recipientAuthUserIds: string[];
+}
+
+/**
+ * POST /internal/slot-created
+ * Called by core-service when a senior posts a new interview slot.
+ * Dispatches in-app notifications and real-time socket events to all registered students.
+ */
+export const handleSlotCreated: RequestHandler = async (req, res, next) => {
+  try {
+    const payload = req.body as SlotCreatedPayload;
+    const { slotId, seniorAuthUserId, seniorName, startTime, endTime, recipientAuthUserIds } = payload;
+
+    if (!recipientAuthUserIds || recipientAuthUserIds.length === 0) {
+      res.status(200).json({ success: true, count: 0 });
+      return;
+    }
+
+    const startDate = new Date(startTime);
+    const dateFormatted = startDate.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+    const timeFormatted = startDate.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    await notificationService.createManyAndEmit(recipientAuthUserIds, {
+      senderAuthUserId: seniorAuthUserId,
+      type: NotificationType.SLOT_CREATED,
+      title: "📅 New Mock Interview Slot!",
+      message: `${seniorName} opened an interview slot on ${dateFormatted} at ${timeFormatted}. Book now to prepare!`,
+      data: { slotId, seniorAuthUserId, seniorName, startTime, endTime },
+    });
+
+    res.status(200).json({ success: true, count: recipientAuthUserIds.length });
+  } catch (error) {
+    next(error);
+  }
+};

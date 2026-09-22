@@ -4,6 +4,7 @@ import {
   IProfile,
   Profile,
   ProfileDocument,
+  ProfileRole,
 } from "../models/profile.model.js";
 
 export class ProfileRepository{
@@ -15,14 +16,14 @@ export class ProfileRepository{
     async findByAuthUserId(authUserId:string):Promise<ProfileDocument | null>{
         return Profile.findOne({
             authUserId,
-        }).exec();
+        }).populate("companyId").exec();
     }
 
     async  findById( id:string):Promise<ProfileDocument | null>{
         if(!Types.ObjectId.isValid(id)){
             return null;
         }
-        return Profile.findById(id).exec();
+        return Profile.findById(id).populate("companyId").exec();
     }
 
     async updateByAuthUserId(
@@ -36,7 +37,31 @@ export class ProfileRepository{
         new: true,
         runValidators: true,
       },
-    ).exec();
+    ).populate("companyId").exec();
+  }
+
+  async findAllStudentAuthUserIds(): Promise<string[]> {
+    const students = await Profile.find({ role: ProfileRole.STUDENT })
+      .select("authUserId")
+      .lean();
+    return students.map((s) => s.authUserId).filter(Boolean);
+  }
+
+  async findSeniors(companyId?: string): Promise<ProfileDocument[]> {
+    const query: Record<string, unknown> = {
+      role: ProfileRole.SENIOR,
+    };
+    if (companyId) {
+      if (Types.ObjectId.isValid(companyId)) {
+        query.companyId = new Types.ObjectId(companyId);
+      } else {
+        query.companyId = companyId;
+      }
+    }
+    return Profile.find(query)
+      .populate("companyId")
+      .sort({ firstName: 1, lastName: 1 })
+      .exec();
   }
 }
 

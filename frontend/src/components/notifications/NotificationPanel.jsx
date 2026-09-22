@@ -16,6 +16,8 @@ function getNotificationMeta(type) {
       return { icon: "🚫", color: "bg-gray-100 text-gray-600", label: "Referral Cancelled" };
     case "INTERVIEW_CONFIRMED":
       return { icon: "🎉", color: "bg-indigo-100 text-indigo-700", label: "Interview Confirmed" };
+    case "SLOT_CREATED":
+      return { icon: "📅", color: "bg-emerald-100 text-emerald-700", label: "New Slot Available" };
     default:
       return { icon: "🔔", color: "bg-gray-100 text-gray-600", label: "Notification" };
   }

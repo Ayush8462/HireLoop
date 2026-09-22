@@ -24,6 +24,7 @@ export interface IProfile {
   graduationYear?: number;
 
   companyId?: Types.ObjectId;
+  companyName?: string;
   designation?: string;
   experienceYears?: number;
 
@@ -126,6 +127,12 @@ const profileSchema = new Schema<IProfile>(
       type: Schema.Types.ObjectId,
       ref: "Company",
       index: true,
+    },
+
+    companyName: {
+      type: String,
+      trim: true,
+      maxlength: 150,
     },
 
     designation: {

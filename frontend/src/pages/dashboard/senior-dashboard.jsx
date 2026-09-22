@@ -34,6 +34,22 @@ const DEFAULT_COMPANIES = [
   { _id: "comp_zomato", name: "Zomato", industry: "Quick Commerce & Tech", headquarters: "Gurgaon, India" },
 ];
 
+/* ─────────────────────────── Degree Options ────────────────────────────────── */
+const DEGREE_OPTIONS = [
+  "B.Tech",
+  "B.E.",
+  "B.S. / B.Sc",
+  "BCA",
+  "M.Tech",
+  "M.E.",
+  "M.S. / M.Sc",
+  "MCA",
+  "MBA",
+  "Dual Degree (B.Tech + M.Tech)",
+  "Ph.D.",
+  "Other",
+];
+
 export default function SeniorDashboard() {
   const navigate = useNavigate();
   const { logoutUser, token } = useAuth();
@@ -80,6 +96,7 @@ export default function SeniorDashboard() {
     lastName: "",
     phone: "",
     companyId: "",
+    companyName: "",
     designation: "",
     experienceYears: "",
     college: "",
@@ -90,6 +107,8 @@ export default function SeniorDashboard() {
     skillInput: "",
     skills: [],
   });
+  const [degreeSelect, setDegreeSelect] = useState("");
+  const [customDegree, setCustomDegree] = useState("");
   const [pSaving, setPSaving] = useState(false);
 
   // ATS State (Senior Resume Checker tool)
@@ -143,17 +162,38 @@ export default function SeniorDashboard() {
       }
     } catch { /* ignore */ }
 
-    // 1. Fetch Profile
+    // 1. Fetch Companies (needed to resolve employer names)
+    let companyList = DEFAULT_COMPANIES;
+    try {
+      const r = await getAllCompanies();
+      const c = r.data?.data?.items || r.data?.data || [];
+      companyList = Array.isArray(c) && c.length > 0 ? c : DEFAULT_COMPANIES;
+      setCompanies(companyList);
+    } catch {
+      setCompanies(DEFAULT_COMPANIES);
+    }
+
+    // 2. Fetch Profile
     try {
       const r = await getMyProfile();
       const p = r.data?.data;
       if (p) {
         setProfile(p);
+        const compName =
+          p.companyName ||
+          p.companyId?.name ||
+          (companyList.find((c) => (c._id || c.id) === (p.companyId?._id || p.companyId))?.name) ||
+          "";
+        const deg = p.degree || "";
+        const isStandard = DEGREE_OPTIONS.filter((d) => d !== "Other").includes(deg);
+        setDegreeSelect(isStandard ? deg : deg ? "Other" : "");
+        setCustomDegree(isStandard ? "" : deg);
         setPForm({
-          firstName: p.firstName || "",
-          lastName: p.lastName || "",
+          firstName: p.firstName || user?.firstName || "",
+          lastName: p.lastName || user?.lastName || "",
           phone: p.phone || "",
           companyId: p.companyId?._id || p.companyId || "",
+          companyName: compName,
           designation: p.designation || "",
           experienceYears: p.experienceYears !== undefined ? String(p.experienceYears) : "",
           college: p.college || "",
@@ -166,41 +206,48 @@ export default function SeniorDashboard() {
         });
         setIsEditingProfile(false);
       } else {
+        const u = JSON.parse(localStorage.getItem("user") || "null");
+        if (u) {
+          setPForm((prev) => ({
+            ...prev,
+            firstName: prev.firstName || u.firstName || "",
+            lastName: prev.lastName || u.lastName || "",
+          }));
+        }
         setIsEditingProfile(true);
       }
     } catch {
+      const u = JSON.parse(localStorage.getItem("user") || "null");
+      if (u) {
+        setPForm((prev) => ({
+          ...prev,
+          firstName: prev.firstName || u.firstName || "",
+          lastName: prev.lastName || u.lastName || "",
+        }));
+      }
       setIsEditingProfile(true);
     }
 
-    // 2. Fetch Received Referrals (Senior Inbox)
+    // 3. Fetch Received Referrals (Senior Inbox)
     try {
       const r = await getMyReceivedReferrals();
       const items = r.data?.data?.items || r.data?.data || [];
       setReferrals(Array.isArray(items) ? items : []);
     } catch { /* ignore */ }
 
-    // 3. Fetch Senior's Bookings History
+    // 4. Fetch Senior's Bookings History
     try {
       const r = await getSeniorHistory();
       const items = r.data?.data?.items || r.data?.data || [];
       setBookings(Array.isArray(items) ? items : []);
     } catch { /* ignore */ }
 
-    // 4. Fetch Senior's Slots
+    // 5. Fetch Senior's Slots
     try {
       const r = await getAvailableSlots();
       const items = r.data?.data?.items || r.data?.data || [];
       setMySlots(Array.isArray(items) ? items : []);
     } catch { /* ignore */ }
-
-    // 5. Fetch Companies (used for Senior Profile employer selector)
-    try {
-      const r = await getAllCompanies();
-      const c = r.data?.data?.items || r.data?.data || [];
-      setCompanies(Array.isArray(c) && c.length > 0 ? c : DEFAULT_COMPANIES);
-    } catch {
-      setCompanies(DEFAULT_COMPANIES);
-    }
 
     // 6. Fetch Overall Stats
     try {
@@ -228,7 +275,8 @@ export default function SeniorDashboard() {
         firstName: pForm.firstName,
         lastName: pForm.lastName,
         phone: pForm.phone || undefined,
-        companyId: pForm.companyId || undefined,
+        companyId: pForm.companyId && /^[0-9a-fA-F]{24}$/.test(pForm.companyId) ? pForm.companyId : undefined,
+        companyName: pForm.companyName?.trim() || undefined,
         designation: pForm.designation || undefined,
         experienceYears: pForm.experienceYears ? Number(pForm.experienceYears) : undefined,
         college: pForm.college || undefined,
@@ -245,9 +293,17 @@ export default function SeniorDashboard() {
 
       if (r.data?.success || r.data?.data) {
         const updated = r.data?.data || r.data;
+        const savedCompany = pForm.companyName?.trim();
+        if (!updated.companyName && savedCompany) {
+          updated.companyName = savedCompany;
+        }
         setProfile(updated);
+        const deg = updated.degree || "";
+        const isStandard = DEGREE_OPTIONS.filter((d) => d !== "Other").includes(deg);
+        setDegreeSelect(isStandard ? deg : deg ? "Other" : "");
+        setCustomDegree(isStandard ? "" : deg);
         setIsEditingProfile(false);
-        toast$("Senior profile updated successfully!", "success");
+        toast$(profile ? "Senior profile updated successfully!" : "Senior profile created successfully!", "success");
       }
     } catch (err) {
       toast$(err.response?.data?.message || err.response?.data?.error?.message || "Failed to update profile", "error");
@@ -416,7 +472,12 @@ export default function SeniorDashboard() {
   const completedBookings = bookings.filter((b) => b.status === "COMPLETED");
 
   const seniorName = profile?.firstName || user?.firstName || "Senior Mentor";
-  const seniorCompany = profile?.companyId?.name || "Tech Company";
+  const seniorCompany =
+    profile?.companyName ||
+    profile?.companyId?.name ||
+    (companies.find((c) => (c._id || c.id) === (profile?.companyId?._id || profile?.companyId))?.name) ||
+    pForm.companyName ||
+    "Company not specified";
   const initials = `${(profile?.firstName || user?.firstName || "S")[0]}${(profile?.lastName || user?.lastName || "M")[0]}`.toUpperCase();
 
   /* ── Senior Sidebar Navigation ───────────────────────────────────────────── */
@@ -555,6 +616,58 @@ export default function SeniorDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Incomplete Profile Alert Banner (First Time Setup) */}
+      {!profile && (
+        <div
+          style={{
+            background: dark ? "rgba(22, 163, 74, 0.12)" : "#ecfdf5",
+            border: `1px solid ${dark ? "rgba(22, 163, 74, 0.35)" : "#a7f3d0"}`,
+            borderRadius: 16,
+            padding: "16px 20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: T.greenLight, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
+                Set up your Senior Mentor Profile
+              </div>
+              <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>
+                Please configure your degree, alma mater, company, and technical domains to activate your senior profile.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setTab("profile");
+              setIsEditingProfile(true);
+            }}
+            style={{
+              background: T.green,
+              color: "#fff",
+              border: "none",
+              borderRadius: 10,
+              padding: "9px 16px",
+              fontWeight: 700,
+              fontSize: 12.5,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            Complete Profile Now →
+          </button>
+        </div>
+      )}
 
       {/* 4 Metric Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
@@ -1295,22 +1408,24 @@ export default function SeniorDashboard() {
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: T.text }}>{seniorName}</h2>
               <span style={{ fontSize: 10.5, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: T.greenLight, color: T.green }}>
-                VERIFIED SENIOR
+                
               </span>
             </div>
             <div style={{ fontSize: 12.5, color: T.muted, marginTop: 3 }}>
-              {profile?.designation || "Senior Engineer"} • {profile?.companyId?.name || seniorCompany} ({profile?.experienceYears || "3+"} yrs exp)
+              {profile?.designation || "Senior Engineer"} • {profile?.companyName || profile?.companyId?.name || seniorCompany} ({profile?.experienceYears ? `${profile.experienceYears} yrs exp` : "3+ yrs exp"})
             </div>
           </div>
         </div>
 
-        <button
-          onClick={() => setIsEditingProfile(!isEditingProfile)}
-          style={{ background: isEditingProfile ? T.surfaceAlt : T.green, color: isEditingProfile ? T.text : "#fff", border: `1px solid ${T.border}`, borderRadius: 10, padding: "8px 14px", fontWeight: 700, fontSize: 12.5, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-        >
-          <Pencil size={14} />
-          {isEditingProfile ? "View Profile Card" : "Edit Profile"}
-        </button>
+        {profile && (
+          <button
+            onClick={() => setIsEditingProfile(!isEditingProfile)}
+            style={{ background: isEditingProfile ? T.surfaceAlt : T.green, color: isEditingProfile ? T.text : "#fff", border: `1px solid ${T.border}`, borderRadius: 10, padding: "8px 14px", fontWeight: 700, fontSize: 12.5, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <Pencil size={14} />
+            {isEditingProfile ? "View Profile Card" : "Edit Profile"}
+          </button>
+        )}
       </div>
 
       {/* Read-Only Profile Card */}
@@ -1324,7 +1439,7 @@ export default function SeniorDashboard() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginTop: 8 }}>
               <div style={{ padding: 12, borderRadius: 10, background: T.surfaceAlt }}>
                 <div style={{ fontSize: 11, color: T.muted }}>Current Company</div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 2 }}>{profile.companyId?.name || seniorCompany}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 2 }}>{profile.companyName || profile.companyId?.name || seniorCompany}</div>
               </div>
               <div style={{ padding: 12, borderRadius: 10, background: T.surfaceAlt }}>
                 <div style={{ fontSize: 11, color: T.muted }}>Designation</div>
@@ -1345,15 +1460,21 @@ export default function SeniorDashboard() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginTop: 8 }}>
               <div style={{ padding: 12, borderRadius: 10, background: T.surfaceAlt }}>
                 <div style={{ fontSize: 11, color: T.muted }}>College</div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 2 }}>{profile.college || "Engineering College"}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 2 }}>{profile.college || "Not specified"}</div>
               </div>
               <div style={{ padding: 12, borderRadius: 10, background: T.surfaceAlt }}>
                 <div style={{ fontSize: 11, color: T.muted }}>Degree & Branch</div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 2 }}>{profile.degree || "B.Tech"} - {profile.branch || "CSE"}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 2 }}>
+                  {profile.degree
+                    ? profile.branch
+                      ? `${profile.degree} - ${profile.branch}`
+                      : profile.degree
+                    : profile.branch || "Not specified"}
+                </div>
               </div>
               <div style={{ padding: 12, borderRadius: 10, background: T.surfaceAlt }}>
                 <div style={{ fontSize: 11, color: T.muted }}>Graduation Year</div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 2 }}>{profile.graduationYear || "2023"}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 2 }}>{profile.graduationYear || "Not specified"}</div>
               </div>
             </div>
           </div>
@@ -1389,7 +1510,23 @@ export default function SeniorDashboard() {
       {/* Edit Form */}
       {isEditingProfile && (
         <form onSubmit={handleSaveProfile} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 22, display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ fontWeight: 800, fontSize: 16, color: T.text }}>Update Senior Profile Details</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: T.text }}>
+                {profile ? "Update Senior Profile Details" : "Set Up Your Senior Profile"}
+              </div>
+              <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>
+                {profile
+                  ? "Update your professional credentials, degree details, and mentoring domains."
+                  : "Please select your degree, college, employer, and skills so students can connect with you."}
+              </div>
+            </div>
+            {!profile && (
+              <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 6, background: T.greenLight, color: T.green }}>
+                First Time Setup
+              </span>
+            )}
+          </div>
 
           <div className="senior-responsive-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -1412,21 +1549,32 @@ export default function SeniorDashboard() {
             </label>
           </div>
 
-          <div className="senior-responsive-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="senior-responsive-grid-3" style={{ display: "grid", gridTemplateColumns: "1.2fr 1.2fr 0.8fr", gap: 12 }}>
             <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11.5, fontWeight: 600, color: T.muted }}>Current Company</span>
-              <select
-                value={pForm.companyId}
-                onChange={(e) => setPForm({ ...pForm, companyId: e.target.value })}
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: T.muted }}>Current Company *</span>
+              <input
+                list="senior-company-options"
+                placeholder="e.g. Google, Microsoft, Amazon, Uber"
+                value={pForm.companyName}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const matched = companies.find(
+                    (c) => c.name?.toLowerCase() === val.toLowerCase().trim()
+                  );
+                  setPForm({
+                    ...pForm,
+                    companyName: val,
+                    companyId: matched ? (matched._id || matched.id) : "",
+                  });
+                }}
+                required
                 style={{ padding: "9px 12px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, outline: "none", fontSize: 13 }}
-              >
-                <option value="">Select Employer</option>
+              />
+              <datalist id="senior-company-options">
                 {companies.map((c) => (
-                  <option key={c._id || c.id} value={c._id || c.id}>
-                    {c.name}
-                  </option>
+                  <option key={c._id || c.id} value={c.name} />
                 ))}
-              </select>
+              </datalist>
             </label>
             <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <span style={{ fontSize: 11.5, fontWeight: 600, color: T.muted }}>Designation</span>
@@ -1437,11 +1585,8 @@ export default function SeniorDashboard() {
                 style={{ padding: "9px 12px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, outline: "none", fontSize: 13 }}
               />
             </label>
-          </div>
-
-          <div className="senior-responsive-grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11.5, fontWeight: 600, color: T.muted }}>Years of Experience</span>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: T.muted }}>Experience (Yrs)</span>
               <input
                 type="number"
                 min="0"
@@ -1452,10 +1597,19 @@ export default function SeniorDashboard() {
                 style={{ padding: "9px 12px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, outline: "none", fontSize: 13 }}
               />
             </label>
+          </div>
+
+          <div style={{ borderTop: `1px dashed ${T.border}`, paddingTop: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: T.green, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Academic Background & Degree Details
+            </span>
+          </div>
+
+          <div className="senior-responsive-grid-2" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
             <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <span style={{ fontSize: 11.5, fontWeight: 600, color: T.muted }}>College Alma Mater</span>
               <input
-                placeholder="e.g. IIT Delhi"
+                placeholder="e.g. IIT Delhi / BITS Pilani"
                 value={pForm.college}
                 onChange={(e) => setPForm({ ...pForm, college: e.target.value })}
                 style={{ padding: "9px 12px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, outline: "none", fontSize: 13 }}
@@ -1472,6 +1626,71 @@ export default function SeniorDashboard() {
               />
             </label>
           </div>
+
+          <div className="senior-responsive-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: T.muted }}>Degree / Qualification *</span>
+              <select
+                value={degreeSelect}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDegreeSelect(val);
+                  if (val === "Other") {
+                    setPForm({ ...pForm, degree: customDegree });
+                  } else {
+                    setPForm({ ...pForm, degree: val });
+                  }
+                }}
+                style={{ padding: "9px 12px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, outline: "none", fontSize: 13 }}
+              >
+                <option value="">Select Degree</option>
+                {DEGREE_OPTIONS.filter((d) => d !== "Other").map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+                <option value="Other">Other (Custom Degree)</option>
+              </select>
+            </label>
+
+            <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: T.muted }}>Branch / Specialization</span>
+              <input
+                list="senior-branch-suggestions"
+                placeholder="e.g. Computer Science (CSE), IT, ECE"
+                value={pForm.branch}
+                onChange={(e) => setPForm({ ...pForm, branch: e.target.value })}
+                style={{ padding: "9px 12px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, outline: "none", fontSize: 13 }}
+              />
+              <datalist id="senior-branch-suggestions">
+                <option value="Computer Science (CSE)" />
+                <option value="Information Technology (IT)" />
+                <option value="Electronics & Communication (ECE)" />
+                <option value="Electrical & Electronics (EEE)" />
+                <option value="Artificial Intelligence & ML" />
+                <option value="Data Science" />
+                <option value="Software Engineering" />
+                <option value="Mechanical Engineering" />
+                <option value="Civil Engineering" />
+              </datalist>
+            </label>
+          </div>
+
+          {degreeSelect === "Other" && (
+            <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: T.green }}>Specify Custom Degree Name *</span>
+              <input
+                placeholder="e.g. B.Arch, M.Des, B.Com, Integrated M.Sc"
+                value={customDegree}
+                onChange={(e) => {
+                  setCustomDegree(e.target.value);
+                  setPForm({ ...pForm, degree: e.target.value });
+                }}
+                required={degreeSelect === "Other"}
+                style={{ padding: "9px 12px", borderRadius: 10, border: `1px solid ${T.green}`, background: T.surfaceAlt, color: T.text, outline: "none", fontSize: 13 }}
+              />
+            </label>
+          )}
 
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 11.5, fontWeight: 600, color: T.muted }}>Bio & Interview Tips</span>
@@ -1537,12 +1756,41 @@ export default function SeniorDashboard() {
               disabled={pSaving}
               style={{ padding: "10px 20px", borderRadius: 10, background: T.green, color: "#fff", border: "none", fontWeight: 700, fontSize: 12.5, cursor: "pointer", opacity: pSaving ? 0.7 : 1 }}
             >
-              {pSaving ? "Saving..." : "Save Senior Profile"}
+              {pSaving
+                ? (profile ? "Saving..." : "Creating Profile...")
+                : (profile ? "Update Senior Profile" : "Create Senior Profile")}
             </button>
             {profile && (
               <button
                 type="button"
-                onClick={() => setIsEditingProfile(false)}
+                onClick={() => {
+                  const deg = profile.degree || "";
+                  const isStandard = DEGREE_OPTIONS.filter((d) => d !== "Other").includes(deg);
+                  setDegreeSelect(isStandard ? deg : deg ? "Other" : "");
+                  setCustomDegree(isStandard ? "" : deg);
+                  const compName =
+                    profile.companyName ||
+                    profile.companyId?.name ||
+                    (companies.find((c) => (c._id || c.id) === (profile.companyId?._id || profile.companyId))?.name) ||
+                    "";
+                  setPForm({
+                    firstName: profile.firstName || "",
+                    lastName: profile.lastName || "",
+                    phone: profile.phone || "",
+                    companyId: profile.companyId?._id || profile.companyId || "",
+                    companyName: compName,
+                    designation: profile.designation || "",
+                    experienceYears: profile.experienceYears !== undefined ? String(profile.experienceYears) : "",
+                    college: profile.college || "",
+                    degree: profile.degree || "",
+                    branch: profile.branch || "",
+                    graduationYear: profile.graduationYear ? String(profile.graduationYear) : "",
+                    bio: profile.bio || "",
+                    skillInput: "",
+                    skills: profile.skills || [],
+                  });
+                  setIsEditingProfile(false);
+                }}
                 style={{ padding: "10px 18px", borderRadius: 10, background: T.surfaceAlt, color: T.text, border: `1px solid ${T.border}`, fontWeight: 600, fontSize: 12.5, cursor: "pointer" }}
               >
                 Cancel

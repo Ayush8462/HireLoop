@@ -131,3 +131,16 @@ export const downloadResumeFile = async (req: Request, res: Response): Promise<v
   }
 };
 
+export const getSeniors: RequestHandler = async (req, res, next) => {
+  try {
+    const companyId = req.query.companyId as string | undefined;
+    const seniors = await profileService.getSeniors(companyId);
+    res.status(200).json({
+      success: true,
+      data: seniors,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

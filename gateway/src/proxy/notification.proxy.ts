@@ -4,7 +4,7 @@ import { env } from "../config/env.js";
 export const notificationProxy = createProxyMiddleware({
   target: env.services.notification,
   changeOrigin: true,
-  pathFilter: ["/api/notifications", "/notifications"],
+  pathFilter: ["/api/notifications", "/notifications", "/socket.io"],
   pathRewrite: {
     "^/api/notifications": "/notifications",
     "^/notifications": "/notifications",

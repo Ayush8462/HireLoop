@@ -64,7 +64,13 @@ export function useNotifications(token) {
       console.warn("[socket] Connection error:", err.message);
     });
 
+    // Periodic fallback polling (every 12 seconds)
+    const pollInterval = setInterval(() => {
+      fetchNotifications();
+    }, 12000);
+
     return () => {
+      clearInterval(pollInterval);
       socket.disconnect();
       socketRef.current = null;
     };
