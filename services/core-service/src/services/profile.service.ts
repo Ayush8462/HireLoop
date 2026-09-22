@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 import { ProfileRole, IProfile } from "../models/profile.model.js";
 import { Resume } from "../models/resume.model.js";
 import { profileRepository } from "../respositories/profile.repository.js";
+import { companyRepository } from "../respositories/company.repository.js";
 import { uploadResumeBuffer } from "../config/cloudinary.js";
 import { logger } from "../config/logger.js";
 import { ApiError } from "../utils/api-error.js";
@@ -24,6 +25,7 @@ interface CreateProfileInput {
   graduationYear?: number;
 
   companyId?: string;
+  companyName?: string;
   designation?: string;
   experienceYears?: number;
 
@@ -45,6 +47,7 @@ interface UpdateProfileInput {
   branch?: string;
   graduationYear?: number;
   companyId?: string;
+  companyName?: string;
   designation?: string;
   experienceYears?: number;
   skills?: string[];
@@ -100,9 +103,40 @@ export class ProfileService {
     );
   }
 
+  let finalCompanyId =
+    data.companyId && Types.ObjectId.isValid(data.companyId)
+      ? new Types.ObjectId(data.companyId)
+      : undefined;
+  let finalCompanyName = data.companyName?.trim();
+
+  if (finalCompanyName) {
+    const existingComp = await companyRepository.findByName(finalCompanyName);
+    if (existingComp) {
+      finalCompanyId = existingComp._id as Types.ObjectId;
+      finalCompanyName = existingComp.name;
+    } else {
+      const slug = finalCompanyName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+      const newComp = await companyRepository.create({
+        name: finalCompanyName,
+        slug: `${slug}-${Date.now().toString(36)}`,
+        createdBy: authUserId,
+      });
+      finalCompanyId = newComp._id as Types.ObjectId;
+    }
+  } else if (finalCompanyId) {
+    const comp = await companyRepository.findById(finalCompanyId.toString());
+    if (comp) {
+      finalCompanyName = comp.name;
+    }
+  }
+
   if (
     profileRole === ProfileRole.SENIOR &&
-    !data.companyId
+    !finalCompanyId &&
+    !finalCompanyName
   ) {
     throw new ApiError(
       400,
@@ -131,9 +165,8 @@ export class ProfileService {
     branch: data.branch,
     graduationYear: data.graduationYear,
 
-    companyId: data.companyId
-      ? new Types.ObjectId(data.companyId)
-      : undefined,
+    companyId: finalCompanyId,
+    companyName: finalCompanyName,
 
     designation: data.designation,
     experienceYears: data.experienceYears,
@@ -187,13 +220,45 @@ export class ProfileService {
     ...profileUpdateData
   } = data;
 
+  let finalCompanyId =
+    companyId && Types.ObjectId.isValid(companyId)
+      ? new Types.ObjectId(companyId)
+      : undefined;
+  let finalCompanyName = profileUpdateData.companyName?.trim();
+
+  if (finalCompanyName) {
+    const existingComp = await companyRepository.findByName(finalCompanyName);
+    if (existingComp) {
+      finalCompanyId = existingComp._id as Types.ObjectId;
+      finalCompanyName = existingComp.name;
+    } else {
+      const slug = finalCompanyName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+      const newComp = await companyRepository.create({
+        name: finalCompanyName,
+        slug: `${slug}-${Date.now().toString(36)}`,
+        createdBy: authUserId,
+      });
+      finalCompanyId = newComp._id as Types.ObjectId;
+    }
+  } else if (companyId && Types.ObjectId.isValid(companyId)) {
+    const comp = await companyRepository.findById(companyId);
+    if (comp) {
+      finalCompanyName = comp.name;
+    }
+  }
+
   const updateData: Partial<IProfile> = {
     ...profileUpdateData,
 
-    ...(companyId !== undefined && {
-      companyId: companyId
-        ? new Types.ObjectId(companyId)
-        : undefined,
+    ...(finalCompanyName !== undefined && {
+      companyName: finalCompanyName,
+    }),
+
+    ...(finalCompanyId !== undefined && {
+      companyId: finalCompanyId,
     }),
   };
 
