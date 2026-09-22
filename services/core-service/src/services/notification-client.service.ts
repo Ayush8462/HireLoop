@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import axios from "axios";
 
 // Mirror of notification-service NotificationType (kept in sync)
 export const NotificationType = {
