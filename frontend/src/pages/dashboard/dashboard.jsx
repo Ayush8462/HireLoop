@@ -2354,11 +2354,17 @@ export default function Dashboard() {
 
             {atsResult.fileUrl ? (
               <div style={{ width: "100%", height: 580, borderRadius: 12, overflow: "hidden", background: "#1e293b", border: `1px solid ${T.border}`, position: "relative" }}>
-                <iframe
-                  src={getResumeViewUrl(atsResult.fileUrl, atsResult.fileName || "Scored_Resume.pdf")}
-                  title="ATS Resume Document"
+                <object
+                  data={getResumeViewUrl(atsResult.fileUrl, atsResult.fileName || "Scored_Resume.pdf")}
+                  type="application/pdf"
                   style={{ width: "100%", height: "100%", border: "none" }}
-                />
+                >
+                  <iframe
+                    src={getResumeViewUrl(atsResult.fileUrl, atsResult.fileName || "Scored_Resume.pdf")}
+                    title="ATS Resume Document"
+                    style={{ width: "100%", height: "100%", border: "none" }}
+                  />
+                </object>
               </div>
             ) : (
               <div style={{ height: 260, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: T.surfaceAlt, borderRadius: 12, gap: 8 }}>
@@ -2716,11 +2722,17 @@ export default function Dashboard() {
           </div>
           {/* Modal Viewer */}
           <div style={{ flex: 1, background: "#1e293b", position: "relative" }}>
-            <iframe
-              src={viewUrl}
-              title={resumeModalTitle || "Resume Document"}
+            <object
+              data={viewUrl}
+              type="application/pdf"
               style={{ width: "100%", height: "100%", border: "none" }}
-            />
+            >
+              <iframe
+                src={viewUrl}
+                title={resumeModalTitle || "Resume Document"}
+                style={{ width: "100%", height: "100%", border: "none" }}
+              />
+            </object>
           </div>
         </div>
       </div>
