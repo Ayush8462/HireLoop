@@ -6,6 +6,7 @@ import {
   createProfile,
   getMyProfile,
   getProfileById,
+  getSeniors,
   updateMyProfile,
   uploadMyResume,
   viewResumeFile,
@@ -75,6 +76,12 @@ router.get(
 router.get(
   "/resume/download",
   downloadResumeFile,
+);
+
+router.get(
+  "/seniors",
+  authenticate,
+  getSeniors,
 );
 
 router.get(

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { logout } from "../../api/auth.js";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { getMyProfile, updateMyProfile, createProfile, uploadProfileResume, getResumeViewUrl, getResumeDownloadUrl } from "../../api/profile.js";
+import { getMyProfile, updateMyProfile, createProfile, uploadProfileResume, getResumeViewUrl, getResumeDownloadUrl, getSeniors } from "../../api/profile.js";
 import { getAllCompanies, getCompanyRoadmaps } from "../../api/company.js";
 import { getAvailableSlots, bookInterview, getStudentHistory, cancelInterview } from "../../api/interview.js";
 import { getMySentReferrals, requestReferral, cancelReferral } from "../../api/referral.js";
@@ -310,6 +310,7 @@ export default function Dashboard() {
   const [bookings, setBookings] = useState([]);
   const [referrals, setReferrals] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [allSeniors, setAllSeniors] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [roadmapData, setRoadmapData] = useState(null);
   const [loadingRoadmap, setLoadingRoadmap] = useState(false);
@@ -467,6 +468,13 @@ export default function Dashboard() {
     } catch {
       setCompanies(DEFAULT_COMPANIES);
     }
+
+    // 6. Fetch Registered Seniors
+    try {
+      const r = await getSeniors();
+      const sList = r.data?.data?.items || r.data?.data || [];
+      setAllSeniors(Array.isArray(sList) ? sList : []);
+    } catch { /* ignore */ }
   };
 
   useEffect(() => {
@@ -2367,6 +2375,21 @@ export default function Dashboard() {
   const renderReferralModal = () => {
     if (!referralModalOpen) return null;
 
+    const selectedTargetCompany = companies.find((c) => String(c._id || c.id) === String(referralForm.companyId));
+    const companySeniors = referralForm.companyId
+      ? allSeniors.filter((s) => {
+          const sCompId = s.companyId?._id
+            ? String(s.companyId._id)
+            : s.companyId
+            ? String(s.companyId)
+            : "";
+          const sCompName = (s.companyId?.name || "").toLowerCase().trim();
+          const targetId = String(referralForm.companyId);
+          const targetName = (selectedTargetCompany?.name || "").toLowerCase().trim();
+          return (sCompId && sCompId === targetId) || (targetName && sCompName && sCompName === targetName);
+        })
+      : [];
+
     return (
       <div style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
         <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, width: "100%", maxWidth: 500, padding: 26, boxShadow: "0 20px 40px rgba(0,0,0,0.2)", maxHeight: "90vh", overflowY: "auto" }}>
@@ -2384,7 +2407,7 @@ export default function Dashboard() {
               <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Target Company *</span>
               <select
                 value={referralForm.companyId}
-                onChange={(e) => setReferralForm({ ...referralForm, companyId: e.target.value })}
+                onChange={(e) => setReferralForm({ ...referralForm, companyId: e.target.value, seniorId: "" })}
                 required
                 style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
               >
@@ -2400,28 +2423,50 @@ export default function Dashboard() {
             {/* Senior Selection */}
             <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Senior / Alumni Mentor *</span>
-              {activeSeniors.length > 0 ? (
+              {!referralForm.companyId ? (
+                <select
+                  disabled
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: `1px solid ${T.border}`,
+                    background: T.surfaceAlt,
+                    color: T.muted,
+                    fontSize: 13.5,
+                    outline: "none",
+                    cursor: "not-allowed",
+                    opacity: 0.7,
+                  }}
+                >
+                  <option value="">Select Target Company above first</option>
+                </select>
+              ) : companySeniors.length > 0 ? (
                 <select
                   value={referralForm.seniorId}
                   onChange={(e) => setReferralForm({ ...referralForm, seniorId: e.target.value })}
                   required
                   style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
                 >
-                  <option value="">Select Verified Senior</option>
-                  {activeSeniors.map((s) => (
+                  <option value="">Select Senior from {selectedTargetCompany?.name || "Company"} ({companySeniors.length} registered)</option>
+                  {companySeniors.map((s) => (
                     <option key={s._id} value={s._id}>
                       {s.firstName} {s.lastName} ({s.designation || "Senior Software Engineer"})
                     </option>
                   ))}
                 </select>
               ) : (
-                <input
-                  value={referralForm.seniorId}
-                  onChange={(e) => setReferralForm({ ...referralForm, seniorId: e.target.value })}
-                  placeholder="Enter Senior Profile ID (e.g. 64b1f...)"
-                  required
-                  style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
-                />
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ fontSize: 12, color: dark ? "#fde047" : "#b45309", background: dark ? "#292209" : "#fef9c3", padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#42380d" : "#fde047"}` }}>
+                    No registered seniors found from {selectedTargetCompany?.name || "this company"} yet. You can manually enter a Senior ID below:
+                  </div>
+                  <input
+                    value={referralForm.seniorId}
+                    onChange={(e) => setReferralForm({ ...referralForm, seniorId: e.target.value })}
+                    placeholder="Enter Senior Profile ID (e.g. 64b1f...)"
+                    required
+                    style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
+                  />
+                </div>
               )}
             </label>
 
