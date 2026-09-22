@@ -412,7 +412,7 @@ export default function AIChatbotWidget({ dark = true }) {
                       {isBot ? renderMarkdown(msg.content) : msg.content}
 
                       {/* Source Citations Collapsible */}
-                      {isBot && msg.citations && msg.citations.length > 0 && (
+                      {/* {isBot && msg.citations && msg.citations.length > 0 && (
                         <div className="mt-3 pt-2.5 border-t border-white/10">
                           <button
                             onClick={() =>
@@ -458,7 +458,7 @@ export default function AIChatbotWidget({ dark = true }) {
                             </div>
                           )}
                         </div>
-                      )}
+                      )} */}
                     </div>
 
                     {/* Follow-up suggestion pills */}
