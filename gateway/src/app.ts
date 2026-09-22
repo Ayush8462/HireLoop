@@ -12,7 +12,9 @@ app.use(
   helmet({
     frameguard: false,
     contentSecurityPolicy: false,
-    crossOriginResourcePolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false,
   })
 );
 

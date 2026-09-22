@@ -152,7 +152,7 @@ export default function LandingPage() {
                 <Code2 size={22} className="text-white" />
               </div>
               <div>
-                <div className="font-extrabold text-lg leading-tight tracking-tight" style={{ color: T.text }}>
+                <div className="font-extrabold text-2xl leading-tight tracking-tight" style={{ color: T.text }}>
                   HireLoop
                 </div>
                 <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: T.green }}>

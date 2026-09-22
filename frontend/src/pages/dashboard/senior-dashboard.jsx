@@ -1971,11 +1971,17 @@ export default function SeniorDashboard() {
               </div>
               <div style={{ flex: 1, position: "relative" }}>
                 {cResumeUrl ? (
-                  <iframe
-                    src={getResumeViewUrl(cResumeUrl, cResumeName)}
-                    title="Candidate Resume"
+                  <object
+                    data={getResumeViewUrl(cResumeUrl, cResumeName)}
+                    type="application/pdf"
                     style={{ width: "100%", height: "100%", border: "none" }}
-                  />
+                  >
+                    <iframe
+                      src={getResumeViewUrl(cResumeUrl, cResumeName)}
+                      title="Candidate Resume"
+                      style={{ width: "100%", height: "100%", border: "none" }}
+                    />
+                  </object>
                 ) : (
                   <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#94a3b8", gap: 8 }}>
                     <FileText size={36} />
@@ -2184,11 +2190,17 @@ export default function SeniorDashboard() {
             </div>
           </div>
           <div style={{ flex: 1, background: "#1e293b", position: "relative" }}>
-            <iframe
-              src={viewUrl}
-              title={resumeViewerTitle || "Candidate Resume"}
+            <object
+              data={viewUrl}
+              type="application/pdf"
               style={{ width: "100%", height: "100%", border: "none" }}
-            />
+            >
+              <iframe
+                src={viewUrl}
+                title={resumeViewerTitle || "Candidate Resume"}
+                style={{ width: "100%", height: "100%", border: "none" }}
+              />
+            </object>
           </div>
         </div>
       </div>

@@ -79,6 +79,10 @@ export const viewResumeFile = async (req: Request, res: Response): Promise<void>
     }
 
     res.removeHeader("X-Frame-Options");
+    res.removeHeader("Cross-Origin-Opener-Policy");
+    res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Content-Security-Policy", "frame-ancestors *");
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${fileName.replace(/"/g, "")}"`);
@@ -115,6 +119,9 @@ export const downloadResumeFile = async (req: Request, res: Response): Promise<v
       buffer = Buffer.from(arrayBuffer);
     }
 
+    res.removeHeader("Cross-Origin-Opener-Policy");
+    res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${fileName.replace(/"/g, "")}"`);

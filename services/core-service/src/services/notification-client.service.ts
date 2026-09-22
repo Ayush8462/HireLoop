@@ -1,4 +1,3 @@
-import axios from "axios";
 import { env } from "../config/env.js";
 
 // Mirror of notification-service NotificationType (kept in sync)
@@ -35,10 +34,14 @@ export const notificationClient = {
     seniorName: string;
   }): Promise<void> {
     try {
-      await axios.post(
+      await fetch(
         `${env.NOTIFICATION_SERVICE_URL}/internal/referral-event`,
-        payload,
-        { headers: INTERNAL_HEADERS, timeout: 5000 },
+        {
+          method: "POST",
+          headers: INTERNAL_HEADERS,
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(5000),
+        },
       );
     } catch (error) {
       console.error("[notification-client] Failed to fire referral event:", error);
@@ -57,10 +60,14 @@ export const notificationClient = {
     meetLink?: string;
   }): Promise<void> {
     try {
-      await axios.post(
+      await fetch(
         `${env.NOTIFICATION_SERVICE_URL}/internal/interview-confirmed`,
-        payload,
-        { headers: INTERNAL_HEADERS, timeout: 5000 },
+        {
+          method: "POST",
+          headers: INTERNAL_HEADERS,
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(5000),
+        },
       );
     } catch (error) {
       console.error("[notification-client] Failed to fire interview confirmed event:", error);

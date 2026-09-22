@@ -8,7 +8,8 @@ import {
   LogOut, Building2, LayoutDashboard,
   Target, Menu, Send, ExternalLink,
   ChevronLeft, Sparkles, Info, Pencil,
-  Download, Eye, FileCheck, FileUp, RefreshCw, Video
+  Download, Eye, FileCheck, FileUp, RefreshCw, Video,
+  Mail, Phone, GraduationCap, BookOpen, Award, Check
 } from "lucide-react";
 import { logout } from "../../api/auth.js";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -524,27 +525,28 @@ export default function Dashboard() {
       return;
     }
     setResumeUploading(true);
+    // Instant optimistic feedback: immediately display selected file name
+    setPForm((f) => ({
+      ...f,
+      resumeFileName: file.name,
+    }));
     try {
       const res = await uploadProfileResume(file);
       if (res.data?.success) {
         const data = res.data.data;
-        const updated = data.profile || {
-          ...profile,
-          resumeUrl: data.resumeUrl,
-          resumeFileName: data.resumeFileName,
-          atsScore: data.atsScore,
-        };
-        setProfile(updated);
+        if (data.profile) {
+          setProfile(data.profile);
+        }
         setPForm((f) => ({
           ...f,
           resumeUrl: data.resumeUrl,
-          resumeFileName: data.resumeFileName,
+          resumeFileName: data.resumeFileName || file.name,
           atsScore: data.atsScore,
         }));
         setReferralForm((rf) => ({
           ...rf,
           resumeUrl: data.resumeUrl,
-          resumeFileName: data.resumeFileName,
+          resumeFileName: data.resumeFileName || file.name,
         }));
         toast$("Resume uploaded to Cloudinary successfully!", "success");
         if (data.atsScore) {
@@ -560,6 +562,12 @@ export default function Dashboard() {
       toast$(err.response?.data?.message || "Failed to upload resume", "error");
     } finally {
       setResumeUploading(false);
+      if (profileResumeInputRef.current) {
+        profileResumeInputRef.current.value = "";
+      }
+      if (referralResumeInputRef.current) {
+        referralResumeInputRef.current.value = "";
+      }
     }
   };
 
@@ -608,9 +616,20 @@ export default function Dashboard() {
         resumeFileName: pForm.resumeFileName || profile?.resumeFileName || undefined,
         atsScore: pForm.atsScore || profile?.atsScore || undefined,
       };
-      const r = profile
-        ? await updateMyProfile(payload)
-        : await createProfile({ ...payload, role: "STUDENT" });
+      let r;
+      if (profile) {
+        r = await updateMyProfile(payload);
+      } else {
+        try {
+          r = await createProfile({ ...payload, role: "STUDENT" });
+        } catch (createErr) {
+          if (createErr.response?.status === 409) {
+            r = await updateMyProfile(payload);
+          } else {
+            throw createErr;
+          }
+        }
+      }
       if (r.data?.success || r.data?.data) {
         const updated = r.data?.data || r.data;
         setProfile(updated);
@@ -951,7 +970,7 @@ export default function Dashboard() {
             <div style={{ width: 34, height: 34, background: "#ede9fe", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={16} color="#7c3aed"/></div>
           </div>
           <div style={{ fontSize: 26, fontWeight: 800, color: T.text, marginTop: 8 }}>
-            {atsResult ? `${atsResult.score}/100` : "75%"}
+            {atsResult ? `${atsResult.score}/100` : "0"}
           </div>
           <div style={{ fontSize: 11.5, color: "#7c3aed", fontWeight: 600, marginTop: 4 }}>
             {atsResult?.level || "Placement Ready"}
@@ -1235,132 +1254,172 @@ export default function Dashboard() {
 
   /* 2. Student Profile View (Detail Card + Edit Mode) */
   const renderProfileView = () => {
-    // Edit Form Mode
+    // Edit / Create Form Mode
     if (isEditingProfile || !profile) {
       return (
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: "26px", maxWidth: 680 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <div>
-              <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: 0 }}>
-                {profile ? "Edit Student Profile" : "Create Student Profile"}
-              </h2>
-              <p style={{ fontSize: 13, color: T.muted, margin: "4px 0 0" }}>
-                Keep your academic and skill information updated for mock interviews and referral reviews.
-              </p>
-            </div>
-            {profile && (
-              <button
-                type="button"
-                onClick={handleCancelEditProfile}
-                style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 10, padding: "7px 14px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-
-          <form onSubmit={handleSaveProfile} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Name */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>First Name *</span>
-                <input
-                  value={pForm.firstName}
-                  onChange={(e) => setPForm({ ...pForm, firstName: e.target.value })}
-                  required
-                  placeholder="First name"
-                  style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
-                />
-              </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Last Name *</span>
-                <input
-                  value={pForm.lastName}
-                  onChange={(e) => setPForm({ ...pForm, lastName: e.target.value })}
-                  required
-                  placeholder="Last name"
-                  style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
-                />
-              </label>
+        <div style={{ maxWidth: 860, margin: "0 auto", width: "100%" }}>
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: "28px 32px", boxShadow: "0 4px 20px rgba(0,0,0,0.04)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, borderBottom: `1px solid ${T.border}`, paddingBottom: 18 }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: T.greenLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <User size={22} color={T.green} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, margin: 0 }}>
+                      {profile ? "Edit Student Profile" : "Create Student Profile"}
+                    </h2>
+                    <p style={{ fontSize: 13, color: T.muted, margin: "4px 0 0" }}>
+                      Keep your credentials and resume updated for mock interviews and referral requests.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {profile && (
+                <button
+                  type="button"
+                  onClick={handleCancelEditProfile}
+                  style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+              )}
             </div>
 
-            {/* Contact info */}
-            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Phone Number</span>
-              <input
-                value={pForm.phone}
-                onChange={(e) => setPForm({ ...pForm, phone: e.target.value })}
-                placeholder="+91 98765 43210"
-                style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
-              />
-            </label>
+            <form onSubmit={handleSaveProfile} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              {/* 1. Basic Information */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.green, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  <User size={14} /> Personal Information
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>First Name *</span>
+                    <input
+                      value={pForm.firstName}
+                      onChange={(e) => setPForm({ ...pForm, firstName: e.target.value })}
+                      required
+                      placeholder="e.g. Rahul"
+                      style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Last Name *</span>
+                    <input
+                      value={pForm.lastName}
+                      onChange={(e) => setPForm({ ...pForm, lastName: e.target.value })}
+                      required
+                      placeholder="e.g. Sharma"
+                      style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Phone Number</span>
+                    <input
+                      value={pForm.phone}
+                      onChange={(e) => setPForm({ ...pForm, phone: e.target.value })}
+                      placeholder="+91 98765 43210"
+                      style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Registered Email</span>
+                    <input
+                      value={user?.email || ""}
+                      disabled
+                      style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.hover, color: T.muted, fontSize: 13.5, outline: "none", cursor: "not-allowed" }}
+                    />
+                  </label>
+                </div>
+              </div>
 
-            {/* Education (Student specific) */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>College / University</span>
-                <input
-                  value={pForm.college}
-                  onChange={(e) => setPForm({ ...pForm, college: e.target.value })}
-                  placeholder="e.g. IIT Bombay / NIT Trichy"
-                  style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
-                />
-              </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Degree</span>
-                <input
-                  value={pForm.degree}
-                  onChange={(e) => setPForm({ ...pForm, degree: e.target.value })}
-                  placeholder="e.g. B.Tech / BCA / MCA"
-                  style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
-                />
-              </label>
-            </div>
+              {/* 2. Academic Background */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.green, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  <GraduationCap size={15} /> Academic Details
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>College / University</span>
+                    <input
+                      value={pForm.college}
+                      onChange={(e) => setPForm({ ...pForm, college: e.target.value })}
+                      placeholder="e.g. IIT Bombay / NIT Trichy"
+                      style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Degree</span>
+                    <input
+                      value={pForm.degree}
+                      onChange={(e) => setPForm({ ...pForm, degree: e.target.value })}
+                      placeholder="e.g. B.Tech / BCA / MCA"
+                      style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Branch / Specialization</span>
+                    <input
+                      value={pForm.branch}
+                      onChange={(e) => setPForm({ ...pForm, branch: e.target.value })}
+                      placeholder="e.g. Computer Science"
+                      style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Graduation Year</span>
+                    <input
+                      type="number"
+                      value={pForm.graduationYear}
+                      onChange={(e) => setPForm({ ...pForm, graduationYear: e.target.value })}
+                      placeholder="e.g. 2026"
+                      style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
+                    />
+                  </label>
+                </div>
+              </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Branch / Specialization</span>
-                <input
-                  value={pForm.branch}
-                  onChange={(e) => setPForm({ ...pForm, branch: e.target.value })}
-                  placeholder="e.g. Computer Science"
-                  style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
+              {/* 3. Bio */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.green, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  <FileText size={14} /> Career Bio & Aspirations
+                </div>
+                <textarea
+                  rows={3}
+                  value={pForm.bio}
+                  onChange={(e) => setPForm({ ...pForm, bio: e.target.value })}
+                  placeholder="Tell seniors about your target job roles, preferred domains, projects, and career goals..."
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none", resize: "vertical", boxSizing: "border-box" }}
                 />
-              </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Graduation Year</span>
-                <input
-                  type="number"
-                  value={pForm.graduationYear}
-                  onChange={(e) => setPForm({ ...pForm, graduationYear: e.target.value })}
-                  placeholder="e.g. 2026"
-                  style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
-                />
-              </label>
-            </div>
+              </div>
 
-            {/* Bio */}
-            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>Bio / Career Aspirations</span>
-              <textarea
-                rows={3}
-                value={pForm.bio}
-                onChange={(e) => setPForm({ ...pForm, bio: e.target.value })}
-                placeholder="Tell seniors about your placement focus, target roles, and strengths..."
-                style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none", resize: "vertical" }}
-              />
-            </label>
-
-            {/* Skills */}
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: T.muted, marginBottom: 6 }}>Technical Skills</div>
-              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <input
-                  value={pForm.skillInput}
-                  onChange={(e) => setPForm({ ...pForm, skillInput: e.target.value })}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
+              {/* 4. Skills */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.green, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Code2 size={14} /> Technical Skills
+                </div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                  <input
+                    value={pForm.skillInput}
+                    onChange={(e) => setPForm({ ...pForm, skillInput: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (pForm.skillInput.trim()) {
+                          setPForm({
+                            ...pForm,
+                            skills: [...new Set([...pForm.skills, pForm.skillInput.trim()])],
+                            skillInput: "",
+                          });
+                        }
+                      }
+                    }}
+                    placeholder="Type a skill and press Enter (e.g. React, C++, Node.js, Python)"
+                    style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
                       if (pForm.skillInput.trim()) {
                         setPForm({
                           ...pForm,
@@ -1368,161 +1427,185 @@ export default function Dashboard() {
                           skillInput: "",
                         });
                       }
-                    }
+                    }}
+                    style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, color: T.text, borderRadius: 10, padding: "0 18px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                  >
+                    Add
+                  </button>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {pForm.skills.length === 0 ? (
+                    <span style={{ fontSize: 12, color: T.muted, fontStyle: "italic" }}>No skills added yet</span>
+                  ) : (
+                    pForm.skills.map((sk) => (
+                      <span key={sk} style={{ display: "flex", alignItems: "center", gap: 6, background: "#dcfce7", color: "#166534", fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 999 }}>
+                        {sk}
+                        <button
+                          type="button"
+                          onClick={() => setPForm({ ...pForm, skills: pForm.skills.filter((s) => s !== sk) })}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#166534", display: "flex", padding: 0 }}
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* 5. Placement Resume (Instant Upload) */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.green, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  <FileText size={14} /> Placement Resume (PDF)
+                </div>
+                <input
+                  ref={profileResumeInputRef}
+                  type="file"
+                  accept=".pdf"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUploadProfileResume(f);
                   }}
-                  placeholder="Type skill & press Enter (e.g. React, C++, Node.js)"
-                  style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 13.5, outline: "none" }}
                 />
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {pForm.skills.map((sk) => (
-                  <span key={sk} style={{ display: "flex", alignItems: "center", gap: 6, background: "#dcfce7", color: "#166534", fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 999 }}>
-                    {sk}
-                    <button
-                      type="button"
-                      onClick={() => setPForm({ ...pForm, skills: pForm.skills.filter((s) => s !== sk) })}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#166534", display: "flex", padding: 0 }}
-                    >
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
 
-            {/* Resume Upload (Cloudinary) */}
-            <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text, display: "flex", alignItems: "center", gap: 6 }}>
-                    <FileText size={16} color={T.green} /> Placement Resume (PDF)
-                  </div>
-                  <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>
-                    Upload your latest resume to Cloudinary for ATS scoring and senior referral reviews
-                  </div>
-                </div>
-              </div>
-
-              <input
-                ref={profileResumeInputRef}
-                type="file"
-                accept=".pdf"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleUploadProfileResume(f);
-                }}
-              />
-
-              {pForm.resumeUrl ? (
-                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <FileCheck size={18} color="#166534" />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
-                        {pForm.resumeFileName || "Student_Resume.pdf"}
+                {pForm.resumeUrl ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12, background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 18px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <FileCheck size={20} color="#166534" />
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
-                        <span style={{ fontSize: 10.5, fontWeight: 700, color: "#166534", background: "#dcfce7", padding: "1px 6px", borderRadius: 4 }}>
-                          ☁ Cloudinary Stored
-                        </span>
-                        {pForm.atsScore && (
-                          <span style={{ fontSize: 10.5, fontWeight: 700, color: "#1d4ed8", background: "#dbeafe", padding: "1px 6px", borderRadius: 4 }}>
-                            ATS: {pForm.atsScore}/100
+                      <div>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text }}>
+                          {pForm.resumeFileName || "Student_Resume.pdf"}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "#166534", background: "#dcfce7", padding: "2px 8px", borderRadius: 999 }}>
+                            ☁ Cloudinary Stored
                           </span>
-                        )}
+                          {pForm.atsScore && (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "#1d4ed8", background: "#dbeafe", padding: "2px 8px", borderRadius: 999 }}>
+                              ATS: {pForm.atsScore}/100
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <button
+                        type="button"
+                        onClick={() => openResumeModal(pForm.resumeUrl, pForm.resumeFileName || "Resume Preview")}
+                        style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, borderRadius: 9, padding: "7px 13px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
+                      >
+                        <Eye size={14} /> Preview
+                      </button>
+                      <button
+                        type="button"
+                        disabled={resumeUploading}
+                        onClick={() => profileResumeInputRef.current?.click()}
+                        style={{ background: T.green, border: "none", color: "#fff", borderRadius: 9, padding: "7px 13px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, opacity: resumeUploading ? 0.7 : 1 }}
+                      >
+                        <RefreshCw size={13} className={resumeUploading ? "animate-spin" : ""} />
+                        {resumeUploading ? "Uploading..." : "Replace PDF"}
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <button
-                      type="button"
-                      onClick={() => openResumeModal(pForm.resumeUrl, pForm.resumeFileName || "Resume Preview")}
-                      style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, color: T.text, borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
-                    >
-                      <Eye size={13} /> View
-                    </button>
-                    <button
-                      type="button"
-                      disabled={resumeUploading}
-                      onClick={() => profileResumeInputRef.current?.click()}
-                      style={{ background: T.green, border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, opacity: resumeUploading ? 0.7 : 1 }}
-                    >
-                      <RefreshCw size={13} className={resumeUploading ? "animate-spin" : ""} />
-                      {resumeUploading ? "Uploading..." : "Replace PDF"}
-                    </button>
+                ) : (
+                  <div
+                    onClick={() => !resumeUploading && profileResumeInputRef.current?.click()}
+                    style={{
+                      border: `1.5px dashed ${resumeUploading ? T.green : T.border}`,
+                      borderRadius: 14, padding: "24px 16px", background: T.surfaceAlt,
+                      cursor: resumeUploading ? "default" : "pointer", textAlign: "center",
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                      transition: "all .15s ease",
+                    }}
+                  >
+                    {resumeUploading ? (
+                      <>
+                        <RefreshCw size={26} color={T.green} className="animate-spin" />
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
+                          Uploading {pForm.resumeFileName || "resume"} to Cloudinary...
+                        </div>
+                        <div style={{ fontSize: 12, color: T.muted }}>Storing securely & analyzing readiness</div>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={26} color={T.green} />
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
+                          Click to select and instantly upload PDF resume
+                        </div>
+                        <div style={{ fontSize: 12, color: T.muted }}>PDF format only · Maximum file size 10MB</div>
+                      </>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  disabled={resumeUploading}
-                  onClick={() => profileResumeInputRef.current?.click()}
-                  style={{ width: "100%", border: `1.5px dashed ${T.border}`, borderRadius: 10, padding: "18px 12px", background: T.surface, color: T.text, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}
-                >
-                  <Upload size={22} color={T.green} />
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>
-                    {resumeUploading ? "Uploading to Cloudinary..." : "Click to select and upload PDF resume"}
-                  </div>
-                  <div style={{ fontSize: 11, color: T.muted }}>Max file size 10MB</div>
-                </button>
-              )}
-            </div>
+                )}
+              </div>
 
-            <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
-              {profile && (
+              <div style={{ display: "flex", gap: 12, marginTop: 8, borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+                {profile && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEditProfile}
+                    style={{ flex: 1, background: T.surfaceAlt, color: T.muted, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 0", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
-                  type="button"
-                  onClick={handleCancelEditProfile}
-                  style={{ flex: 1, background: T.surfaceAlt, color: T.muted, border: `1px solid ${T.border}`, borderRadius: 11, padding: "12px 0", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+                  type="submit"
+                  disabled={pSaving}
+                  style={{ flex: 2, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", fontWeight: 700, fontSize: 14, cursor: "pointer", opacity: pSaving ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                 >
-                  Cancel
+                  {pSaving ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" /> Saving Profile...
+                    </>
+                  ) : (
+                    profile ? "Save Changes" : "Create Student Profile"
+                  )}
                 </button>
-              )}
-              <button
-                type="submit"
-                disabled={pSaving}
-                style={{ flex: 2, background: T.green, color: "#fff", border: "none", borderRadius: 11, padding: "12px 0", fontWeight: 700, fontSize: 14, cursor: "pointer", opacity: pSaving ? 0.6 : 1 }}
-              >
-                {pSaving ? "Saving..." : "Save Student Profile"}
-              </button>
-            </div>
-          </form>
+              </div>
+            </form>
+          </div>
         </div>
       );
     }
 
-    // Detail Display Mode
+    // Detail Display Mode — Centered & 2-Column Balanced Dashboard Layout
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 680 }}>
-        {/* Profile Card Header */}
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 26 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <div style={{ width: 62, height: 62, borderRadius: "50%", background: T.green, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800 }}>
+      <div style={{ maxWidth: 1040, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20, width: "100%" }}>
+        {/* Profile Card Header (Spans full width) */}
+        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: "26px 28px", boxShadow: "0 4px 20px rgba(0,0,0,0.03)" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+              <div style={{ width: 68, height: 68, borderRadius: "50%", background: T.green, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 800, flexShrink: 0, boxShadow: "0 6px 16px rgba(16,185,129,0.25)" }}>
                 {initials}
               </div>
               <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: T.text }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: T.text, lineHeight: 1.2 }}>
                   {profile.firstName} {profile.lastName}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 8 }}>
                   <span style={{ fontSize: 11.5, fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#dcfce7", color: "#166534" }}>
                     🎓 Student Candidate
                   </span>
                   {user?.email && (
-                    <span style={{ fontSize: 12, color: T.muted }}>
-                      {user.email}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: T.muted, background: T.surfaceAlt, padding: "3px 10px", borderRadius: 999, border: `1px solid ${T.border}` }}>
+                      <Mail size={12} color={T.muted} /> {user.email}
+                    </span>
+                  )}
+                  {profile.phone && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: T.muted, background: T.surfaceAlt, padding: "3px 10px", borderRadius: 999, border: `1px solid ${T.border}` }}>
+                      <Phone size={12} color={T.muted} /> {profile.phone}
+                    </span>
+                  )}
+                  {profile.college && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: T.muted, background: T.surfaceAlt, padding: "3px 10px", borderRadius: 999, border: `1px solid ${T.border}` }}>
+                      <Building2 size={12} color={T.muted} /> {profile.college}
                     </span>
                   )}
                 </div>
-                {profile.phone && (
-                  <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>
-                    📞 {profile.phone}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -1530,8 +1613,9 @@ export default function Dashboard() {
               onClick={() => setIsEditingProfile(true)}
               style={{
                 background: T.green, color: "#fff", border: "none", borderRadius: 12,
-                padding: "10px 18px", fontWeight: 700, fontSize: 13,
-                display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
+                padding: "10px 20px", fontWeight: 700, fontSize: 13.5,
+                display: "flex", alignItems: "center", gap: 7, cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(16,185,129,0.25)",
               }}
             >
               <Pencil size={15} /> Edit Profile
@@ -1539,155 +1623,207 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Placement Resume Card */}
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <FileText size={18} color={T.green} />
-              <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Placement Resume & ATS Status</span>
+        {/* 2-Column Responsive Body Layout */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 20 }}>
+          {/* Left Column: Academic Details & Career Bio */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Academic Details Card */}
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 10, background: T.greenLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <GraduationCap size={18} color={T.green} />
+                </div>
+                <div>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: T.text }}>Academic Background</span>
+                  <div style={{ fontSize: 11.5, color: T.muted }}>Degree & University Details</div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, padding: "12px 14px", borderRadius: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>College / University</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 4, wordBreak: "break-word" }}>
+                    {profile.college || "Not provided"}
+                  </div>
+                </div>
+                <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, padding: "12px 14px", borderRadius: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Degree</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 4 }}>
+                    {profile.degree || "Not provided"}
+                  </div>
+                </div>
+                <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, padding: "12px 14px", borderRadius: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Branch / Major</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 4, wordBreak: "break-word" }}>
+                    {profile.branch || "Not provided"}
+                  </div>
+                </div>
+                <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, padding: "12px 14px", borderRadius: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Graduation Year</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginTop: 4 }}>
+                    {profile.graduationYear || "Not provided"}
+                  </div>
+                </div>
+              </div>
             </div>
-            <input
-              ref={profileResumeInputRef}
-              type="file"
-              accept=".pdf"
-              style={{ display: "none" }}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleUploadProfileResume(f);
-              }}
-            />
-            <button
-              onClick={() => profileResumeInputRef.current?.click()}
-              disabled={resumeUploading}
-              style={{
-                background: T.surfaceAlt, color: T.text, border: `1px solid ${T.border}`, borderRadius: 10,
-                padding: "7px 13px", fontWeight: 600, fontSize: 12, display: "flex", alignItems: "center", gap: 5, cursor: "pointer",
-              }}
-            >
-              <FileUp size={14} color={T.green} /> {profile.resumeUrl ? "Update Resume" : "Upload Resume"}
-            </button>
+
+            {/* Career Bio Card */}
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 10, background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Target size={18} color="#d97706" />
+                </div>
+                <div>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: T.text }}>Career Bio & Aspirations</span>
+                  <div style={{ fontSize: 11.5, color: T.muted }}>Placement Focus & Goals</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 13.5, color: profile.bio ? T.text : T.muted, lineHeight: 1.65, background: T.surfaceAlt, padding: "14px 16px", borderRadius: 12, border: `1px solid ${T.border}` }}>
+                {profile.bio || "No career bio added yet. Click 'Edit Profile' to share your focus and target companies with seniors."}
+              </div>
+            </div>
           </div>
 
-          {profile.resumeUrl ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 16px", gap: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <FileCheck size={22} color="#166534" />
+          {/* Right Column: Placement Resume & Technical Skills */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Placement Resume Card */}
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: T.greenLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <FileText size={18} color={T.green} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
-                      {profile.resumeFileName || "Placement_Resume.pdf"}
+                    <span style={{ fontSize: 15, fontWeight: 800, color: T.text }}>Placement Resume</span>
+                    <div style={{ fontSize: 11.5, color: T.muted }}>Verified on Cloudinary</div>
+                  </div>
+                </div>
+                <input
+                  ref={profileResumeInputRef}
+                  type="file"
+                  accept=".pdf"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUploadProfileResume(f);
+                  }}
+                />
+                <button
+                  onClick={() => profileResumeInputRef.current?.click()}
+                  disabled={resumeUploading}
+                  style={{
+                    background: T.surfaceAlt, color: T.text, border: `1px solid ${T.border}`, borderRadius: 10,
+                    padding: "7px 13px", fontWeight: 600, fontSize: 12, display: "flex", alignItems: "center", gap: 5, cursor: "pointer",
+                  }}
+                >
+                  <FileUp size={14} color={T.green} /> {profile.resumeUrl ? "Update Resume" : "Upload Resume"}
+                </button>
+              </div>
+
+              {profile.resumeUrl ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, borderRadius: 14, padding: "14px 16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 42, height: 42, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <FileCheck size={22} color="#166534" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {profile.resumeFileName || "Placement_Resume.pdf"}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 4 }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 700, color: "#166534", background: "#dcfce7", padding: "2px 8px", borderRadius: 999 }}>
+                            ☁ Cloudinary Verified
+                          </span>
+                          {profile.atsScore ? (
+                            <span style={{ fontSize: 10.5, fontWeight: 700, color: profile.atsScore >= 75 ? "#166534" : "#b45309", background: profile.atsScore >= 75 ? "#dcfce7" : "#fef3c7", padding: "2px 8px", borderRadius: 999 }}>
+                              ATS Score: {profile.atsScore}/100
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 10.5, color: T.muted }}>ATS score pending</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#166534", background: "#dcfce7", padding: "2px 8px", borderRadius: 999 }}>
-                        ☁ Cloudinary Verified
-                      </span>
-                      {profile.atsScore ? (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: profile.atsScore >= 75 ? "#166534" : "#b45309", background: profile.atsScore >= 75 ? "#dcfce7" : "#fef3c7", padding: "2px 8px", borderRadius: 999 }}>
-                          ATS Score: {profile.atsScore}/100
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 11, color: T.muted }}>ATS score pending</span>
-                      )}
+
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
+                      <button
+                        type="button"
+                        onClick={() => openResumeModal(profile.resumeUrl, profile.resumeFileName || "Placement Resume")}
+                        style={{ flex: 1, minWidth: 80, background: T.surface, border: `1px solid ${T.border}`, color: T.text, borderRadius: 9, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}
+                      >
+                        <Eye size={13} /> Preview
+                      </button>
+                      <a
+                        href={getResumeDownloadUrl(profile.resumeUrl, profile.resumeFileName || "Placement_Resume.pdf")}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                        style={{ flex: 1, minWidth: 80, background: T.surface, border: `1px solid ${T.border}`, color: T.text, textDecoration: "none", borderRadius: 9, padding: "7px 12px", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}
+                      >
+                        <Download size={13} /> Download
+                      </a>
+                      <button
+                        type="button"
+                        disabled={atsLoading}
+                        onClick={handleScoreProfileResume}
+                        style={{ flex: 1.2, minWidth: 100, background: T.green, border: "none", color: "#fff", borderRadius: 9, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}
+                      >
+                        <Sparkles size={13} /> {atsLoading ? "Scoring..." : "ATS Review"}
+                      </button>
                     </div>
                   </div>
                 </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              ) : (
+                <div style={{ background: T.surfaceAlt, border: `1.5px dashed ${T.border}`, borderRadius: 14, padding: "24px 16px", textAlign: "center" }}>
+                  <Upload size={28} color={T.muted} style={{ margin: "0 auto 8px" }} />
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text }}>No resume uploaded yet</div>
+                  <div style={{ fontSize: 12, color: T.muted, margin: "4px 0 14px" }}>
+                    Upload your PDF resume to store it securely on Cloudinary and attach it to job referral requests.
+                  </div>
                   <button
                     type="button"
-                    onClick={() => openResumeModal(profile.resumeUrl, profile.resumeFileName || "Placement Resume")}
-                    style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, borderRadius: 9, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
+                    onClick={() => profileResumeInputRef.current?.click()}
+                    style={{ background: T.green, color: "#fff", border: "none", borderRadius: 10, padding: "8px 18px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
                   >
-                    <Eye size={14} /> Preview
-                  </button>
-                  <a
-                    href={getResumeDownloadUrl(profile.resumeUrl, profile.resumeFileName || "Placement_Resume.pdf")}
-                    target="_blank"
-                    rel="noreferrer"
-                    download
-                    style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, textDecoration: "none", borderRadius: 9, padding: "7px 12px", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}
-                  >
-                    <Download size={14} /> Download
-                  </a>
-                  <button
-                    type="button"
-                    disabled={atsLoading}
-                    onClick={handleScoreProfileResume}
-                    style={{ background: T.green, border: "none", color: "#fff", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
-                  >
-                    <Sparkles size={13} /> {atsLoading ? "Scoring..." : "ATS Review"}
+                    Upload PDF Resume
                   </button>
                 </div>
-              </div>
+              )}
             </div>
-          ) : (
-            <div style={{ background: T.surfaceAlt, border: `1.5px dashed ${T.border}`, borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
-              <Upload size={28} color={T.muted} style={{ margin: "0 auto 8px" }} />
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text }}>No resume uploaded yet</div>
-              <div style={{ fontSize: 12, color: T.muted, margin: "4px 0 12px" }}>
-                Upload your PDF resume to store it securely on Cloudinary and attach it to job referral requests.
-              </div>
-              <button
-                type="button"
-                onClick={() => profileResumeInputRef.current?.click()}
-                style={{ background: T.green, color: "#fff", border: "none", borderRadius: 10, padding: "8px 18px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
-              >
-                Upload PDF Resume
-              </button>
-            </div>
-          )}
-        </div>
 
-        {/* Academic Details Card */}
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <Building2 size={17} color={T.green} />
-            <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Academic Details</span>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, padding: "14px 16px", borderRadius: 12 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>College / University</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginTop: 4 }}>{profile.college || "Not provided"}</div>
-            </div>
-            <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, padding: "14px 16px", borderRadius: 12 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Degree</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginTop: 4 }}>{profile.degree || "Not provided"}</div>
-            </div>
-            <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, padding: "14px 16px", borderRadius: 12 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Branch / Major</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginTop: 4 }}>{profile.branch || "Not provided"}</div>
-            </div>
-            <div style={{ background: T.surfaceAlt, border: `1px solid ${T.border}`, padding: "14px 16px", borderRadius: 12 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Graduation Year</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginTop: 4 }}>{profile.graduationYear || "Not provided"}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bio Card */}
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 24 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 10 }}>Career Bio & Aspirations</div>
-          <div style={{ fontSize: 13.5, color: profile.bio ? T.text : T.muted, lineHeight: 1.6 }}>
-            {profile.bio || "No career bio added yet. Click 'Edit Profile' to share your goals and background."}
-          </div>
-        </div>
-
-        {/* Technical Skills Card */}
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 18, padding: 24 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 12 }}>Technical Skills ({profile.skills?.length || 0})</div>
-          {!profile.skills || profile.skills.length === 0 ? (
-            <div style={{ fontSize: 13, color: T.muted }}>No skills added yet. Add skills to match with job referrals and mock interviews!</div>
-          ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {profile.skills.map((s) => (
-                <span key={s} style={{ fontSize: 12.5, fontWeight: 600, background: "#dcfce7", color: "#166534", padding: "5px 14px", borderRadius: 999 }}>
-                  {s}
+            {/* Technical Skills Card */}
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: "#ede9fe", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Code2 size={18} color="#7c3aed" />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: T.text }}>Technical Skills</span>
+                    <div style={{ fontSize: 11.5, color: T.muted }}>Domain & Language Competencies</div>
+                  </div>
+                </div>
+                <span style={{ fontSize: 11.5, fontWeight: 700, background: "#ede9fe", color: "#7c3aed", padding: "2px 8px", borderRadius: 999 }}>
+                  {profile.skills?.length || 0} Skills
                 </span>
-              ))}
+              </div>
+
+              {!profile.skills || profile.skills.length === 0 ? (
+                <div style={{ fontSize: 13, color: T.muted, background: T.surfaceAlt, padding: "14px", borderRadius: 12, border: `1px solid ${T.border}` }}>
+                  No skills added yet. Click 'Edit Profile' to add skills for matching referrals!
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {profile.skills.map((s) => (
+                    <span key={s} style={{ fontSize: 12, fontWeight: 600, background: "#dcfce7", color: "#166534", padding: "5px 12px", borderRadius: 999 }}>
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     );
@@ -2226,11 +2362,17 @@ export default function Dashboard() {
 
             {atsResult.fileUrl ? (
               <div style={{ width: "100%", height: 580, borderRadius: 12, overflow: "hidden", background: "#1e293b", border: `1px solid ${T.border}`, position: "relative" }}>
-                <iframe
-                  src={getResumeViewUrl(atsResult.fileUrl, atsResult.fileName || "Scored_Resume.pdf")}
-                  title="ATS Resume Document"
+                <object
+                  data={getResumeViewUrl(atsResult.fileUrl, atsResult.fileName || "Scored_Resume.pdf")}
+                  type="application/pdf"
                   style={{ width: "100%", height: "100%", border: "none" }}
-                />
+                >
+                  <iframe
+                    src={getResumeViewUrl(atsResult.fileUrl, atsResult.fileName || "Scored_Resume.pdf")}
+                    title="ATS Resume Document"
+                    style={{ width: "100%", height: "100%", border: "none" }}
+                  />
+                </object>
               </div>
             ) : (
               <div style={{ height: 260, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: T.surfaceAlt, borderRadius: 12, gap: 8 }}>
@@ -2625,11 +2767,17 @@ export default function Dashboard() {
           </div>
           {/* Modal Viewer */}
           <div style={{ flex: 1, background: "#1e293b", position: "relative" }}>
-            <iframe
-              src={viewUrl}
-              title={resumeModalTitle || "Resume Document"}
+            <object
+              data={viewUrl}
+              type="application/pdf"
               style={{ width: "100%", height: "100%", border: "none" }}
-            />
+            >
+              <iframe
+                src={viewUrl}
+                title={resumeModalTitle || "Resume Document"}
+                style={{ width: "100%", height: "100%", border: "none" }}
+              />
+            </object>
           </div>
         </div>
       </div>
