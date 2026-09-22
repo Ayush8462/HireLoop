@@ -45,12 +45,30 @@ export class InterviewService {
       throw new ApiError(400, "Slot start time cannot be in the past");
     }
 
-    return interviewRepository.createSlot({
+    const slot = await interviewRepository.createSlot({
       seniorId: seniorProfile._id,
       startTime: start,
       endTime: end,
       status: InterviewSlotStatus.AVAILABLE,
     });
+
+    // Notify all students about the newly available slot (fire-and-forget)
+    profileRepository.findAllStudentAuthUserIds().then((studentAuthUserIds) => {
+      if (studentAuthUserIds.length > 0) {
+        notificationClient.fireSlotCreated({
+          slotId: slot._id.toString(),
+          seniorAuthUserId: authUserId,
+          seniorName: `${seniorProfile.firstName || ""} ${seniorProfile.lastName || ""}`.trim(),
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+          recipientAuthUserIds: studentAuthUserIds,
+        });
+      }
+    }).catch((err) => {
+      console.error("[interview.service] Failed to fetch student IDs for slot notification:", err);
+    });
+
+    return slot;
   }
 
   async getAvailableSlots(seniorId?: string) {
@@ -104,17 +122,32 @@ export class InterviewService {
     });
 
     // Notify both student and senior + send email with Google Meet link (fire-and-forget)
-    const seniorProfile = await profileRepository.findById(slot.seniorId._id.toString());
-    if (seniorProfile) {
+    const senior = slot.seniorId as any;
+    let seniorAuthUserId = senior?.authUserId;
+    let seniorFirstName = senior?.firstName;
+    let seniorLastName = senior?.lastName;
+
+    if (!seniorAuthUserId) {
+      const seniorProfile = await profileRepository.findById(
+        slot.seniorId._id ? slot.seniorId._id.toString() : slot.seniorId.toString()
+      );
+      if (seniorProfile) {
+        seniorAuthUserId = seniorProfile.authUserId;
+        seniorFirstName = seniorProfile.firstName;
+        seniorLastName = seniorProfile.lastName;
+      }
+    }
+
+    if (seniorAuthUserId) {
       notificationClient.fireInterviewConfirmed({
         bookingId: booking._id.toString(),
         slotId: slot._id.toString(),
         startTime: slot.startTime.toISOString(),
         endTime: slot.endTime.toISOString(),
         studentAuthUserId: authUserId,
-        seniorAuthUserId: seniorProfile.authUserId,
-        studentName: `${studentProfile.firstName} ${studentProfile.lastName}`,
-        seniorName: `${seniorProfile.firstName} ${seniorProfile.lastName}`,
+        seniorAuthUserId: seniorAuthUserId,
+        studentName: `${studentProfile.firstName || ""} ${studentProfile.lastName || ""}`.trim(),
+        seniorName: `${seniorFirstName || ""} ${seniorLastName || ""}`.trim(),
         meetLink,
       });
     }

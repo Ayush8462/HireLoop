@@ -9,6 +9,7 @@ export const NotificationType = {
   REFERRAL_SUBMITTED: "REFERRAL_SUBMITTED",
   REFERRAL_CANCELLED: "REFERRAL_CANCELLED",
   INTERVIEW_CONFIRMED: "INTERVIEW_CONFIRMED",
+  SLOT_CREATED: "SLOT_CREATED",
 } as const;
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
@@ -63,6 +64,25 @@ export const notificationClient = {
       );
     } catch (error) {
       console.error("[notification-client] Failed to fire interview confirmed event:", error);
+    }
+  },
+
+  async fireSlotCreated(payload: {
+    slotId: string;
+    seniorAuthUserId: string;
+    seniorName: string;
+    startTime: string;
+    endTime: string;
+    recipientAuthUserIds: string[];
+  }): Promise<void> {
+    try {
+      await axios.post(
+        `${env.NOTIFICATION_SERVICE_URL}/internal/slot-created`,
+        payload,
+        { headers: INTERNAL_HEADERS, timeout: 5000 },
+      );
+    } catch (error) {
+      console.error("[notification-client] Failed to fire slot created event:", error);
     }
   },
 };
