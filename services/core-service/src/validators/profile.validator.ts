@@ -134,6 +134,13 @@ const createProfileFields = {
 
   companyId: z.preprocess(emptyStringToUndefined, objectIdSchema.optional()),
 
+  companyName: optionalString(
+    z
+      .string()
+      .trim()
+      .max(150, "Company name cannot exceed 150 characters"),
+  ),
+
   designation: optionalString(
     z
       .string()
@@ -272,6 +279,13 @@ const updateProfileFields = {
   ),
 
   companyId: z.preprocess(emptyStringToUndefined, objectIdSchema.optional()),
+
+  companyName: optionalString(
+    z
+      .string()
+      .trim()
+      .max(150, "Company name cannot exceed 150 characters"),
+  ),
 
   designation: optionalString(
     z

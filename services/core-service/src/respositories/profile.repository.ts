@@ -16,14 +16,14 @@ export class ProfileRepository{
     async findByAuthUserId(authUserId:string):Promise<ProfileDocument | null>{
         return Profile.findOne({
             authUserId,
-        }).exec();
+        }).populate("companyId").exec();
     }
 
     async  findById( id:string):Promise<ProfileDocument | null>{
         if(!Types.ObjectId.isValid(id)){
             return null;
         }
-        return Profile.findById(id).exec();
+        return Profile.findById(id).populate("companyId").exec();
     }
 
     async updateByAuthUserId(
@@ -37,7 +37,7 @@ export class ProfileRepository{
         new: true,
         runValidators: true,
       },
-    ).exec();
+    ).populate("companyId").exec();
   }
 
   async findAllStudentAuthUserIds(): Promise<string[]> {
