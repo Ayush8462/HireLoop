@@ -491,7 +491,7 @@ export default function AIChatbotWidget({ dark = true }) {
                     <Bot size={14} />
                   </div>
                   <div className="flex items-center gap-1">
-                    <span>Synthesizing RAG answer</span>
+                    <span>Thinking...</span>
                     <span className="inline-flex gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" />
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:0.2s]" />
